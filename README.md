@@ -60,6 +60,29 @@ npm install
 npm run dev
 ```
 
+## Deploy to GitHub Pages
+
+This repo includes a GitHub Actions workflow at `.github/workflows/deploy.yml`
+that builds and deploys `dist/` to GitHub Pages on every push to `main`.
+
+1. Push this project to GitHub.
+2. In your repository, go to **Settings > Pages**.
+3. Under **Build and deployment**, choose **Source: GitHub Actions**.
+4. Push to `main` (or run the workflow manually in **Actions**).
+
+Live site URL: https://robokozo.github.io/planet-defense/
+
+The workflow sets `VITE_BASE_PATH` to `/<repo-name>/` automatically so the app
+is served correctly from a project Pages URL.
+
+If you want to test the same base path locally, run:
+
+```sh
+set VITE_BASE_PATH=/planet-defense/
+npm run build
+npm run preview
+```
+
 ## Tooling
 
 - `npm run lint` — oxlint

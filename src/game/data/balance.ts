@@ -214,6 +214,10 @@ export const LANCE = {
   sweepArcDegBase: 70,
   sweepArcDegPerLevel: 15,
   sweepSpeedDegPerSec: 80,
+  /** compatibility aliases used by the scene's linear sweep implementation */
+  sweepSpanBase: 70,
+  sweepSpanPerLevel: 15,
+  sweepSpeedPxPerSec: 80,
   beamHalfWidthPx: 9,
 } as const
 
