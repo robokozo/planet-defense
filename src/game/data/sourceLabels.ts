@@ -16,4 +16,5 @@ export const SOURCE_LABELS: Record<string, string> = {
   storm: 'Storm Front',
   ion: 'Ion Rail',
   cluster: 'Cluster Bombs',
+  burn: 'Burning',
 }

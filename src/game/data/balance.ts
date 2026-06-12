@@ -103,6 +103,10 @@ export const BASE_RUN_STATS: RunStats = {
   barrageLevel: 0,
   twinRailLevel: 0,
   mitosisLevel: 0,
+  incendiaryLevel: 0,
+  napalmLevel: 0,
+  wildfireLevel: 0,
+  thermiteLevel: 0,
 }
 
 export const SYNERGIES = {
@@ -145,6 +149,26 @@ export const SYNERGIES = {
   fabricators: {
     extraMinesPerDropPerLevel: 1,
     extraMaxActivePerLevel: 2,
+  },
+  /** flamethrower × main guns: bullets ignite whatever they hit; burn dps = bullet damage × mult */
+  incendiary: {
+    burnDpsMultBase: 0.35,
+    burnDpsMultPerLevel: 0.15,
+  },
+  /** flamethrower × rocket pod: blasts soak the zone in burning fuel; burn dps = bullet damage × mult */
+  napalm: {
+    burnDpsMultBase: 0.6,
+    burnDpsMultPerLevel: 0.25,
+  },
+  /** flamethrower × devourer: when a burning invader dies, its fire leaps to neighbors */
+  wildfire: {
+    spreadRadiusBase: 90,
+    spreadRadiusPerLevel: 20,
+  },
+  /** flamethrower × thermal lance: the beam ignites everything it sears; burn dps = bullet damage × mult */
+  thermite: {
+    burnDpsMultBase: 0.8,
+    burnDpsMultPerLevel: 0.3,
   },
   /** rocket pod × mine layer: rocket blasts scatter armed mines */
   mirv: {
@@ -290,6 +314,13 @@ export const FLAME = {
   /** per-burst damage to everything in the cone = bullet damage × (baseDamageMult + damageMultPerLevel × (level − 1)) */
   baseDamageMult: 1.1,
   damageMultPerLevel: 0.45,
+  /** every cone hit also ignites: burn dps = bullet damage × (burnDpsMultBase + burnDpsMultPerLevel × (level − 1)) */
+  burnDpsMultBase: 0.4,
+  burnDpsMultPerLevel: 0.15,
+  /** re-igniting refreshes this; the strongest dps wins, burns never stack */
+  burnDurationMs: 3_000,
+  /** burn damage lands in chunks this far apart so popups stay readable */
+  burnTickMs: 500,
 } as const
 
 /** passive enemy behaviors that tick on a shared accumulator */

@@ -59,6 +59,10 @@ export interface RunStats {
   barrageLevel: number
   twinRailLevel: number
   mitosisLevel: number
+  incendiaryLevel: number
+  napalmLevel: number
+  wildfireLevel: number
+  thermiteLevel: number
 }
 
 export type UpgradeRarity = 'common' | 'rare' | 'epic' | 'legendary'

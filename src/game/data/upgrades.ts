@@ -96,7 +96,7 @@ export const UPGRADE_DEFINITIONS: Array<UpgradeDefinition> = [
     id: 'flame',
     name: 'Flamethrower',
     description:
-      'Mounts a flamethrower: short-range cone bursts that roast everything in front of the cannon (stacks: faster, hotter, longer reach)',
+      'Mounts a flamethrower: short-range cone bursts that roast everything in front of the cannon and set it burning (stacks: faster, hotter, longer reach)',
     rarity: 'common',
     category: 'weapon',
     maxStacks: BASE_MAX_STACKS,
@@ -368,6 +368,62 @@ export const UPGRADE_DEFINITIONS: Array<UpgradeDefinition> = [
       { id: 'nanite', stacks: 2 },
     ],
     apply: (stats) => ({ ...stats, mitosisLevel: stats.mitosisLevel + 1 }),
+  },
+  {
+    id: 'incendiary',
+    name: 'Incendiary Rounds',
+    description:
+      'Synergy: tracer ammunition — main-gun bullets set whatever they hit burning (stacks: hotter burn)',
+    rarity: 'epic',
+    category: 'tactic',
+    maxStacks: BASE_MAX_STACKS,
+    requires: [
+      { id: 'salvo', stacks: 2 },
+      { id: 'flame', stacks: 2 },
+    ],
+    apply: (stats) => ({ ...stats, incendiaryLevel: stats.incendiaryLevel + 1 }),
+  },
+  {
+    id: 'napalm',
+    name: 'Napalm Warheads',
+    description:
+      'Synergy: rocket blasts soak the impact zone in burning fuel, igniting everything caught in them (stacks: hotter burn)',
+    rarity: 'epic',
+    category: 'tactic',
+    maxStacks: BASE_MAX_STACKS,
+    requires: [
+      { id: 'rocket', stacks: 2 },
+      { id: 'flame', stacks: 2 },
+    ],
+    apply: (stats) => ({ ...stats, napalmLevel: stats.napalmLevel + 1 }),
+  },
+  {
+    id: 'wildfire',
+    name: 'Wildfire',
+    description:
+      'Synergy: when a burning invader dies, the fire leaps to every invader nearby (stacks: wider spread)',
+    rarity: 'epic',
+    category: 'tactic',
+    maxStacks: BASE_MAX_STACKS,
+    requires: [
+      { id: 'devourer', stacks: 2 },
+      { id: 'flame', stacks: 2 },
+    ],
+    apply: (stats) => ({ ...stats, wildfireLevel: stats.wildfireLevel + 1 }),
+  },
+  {
+    id: 'thermite',
+    name: 'Thermite Beam',
+    description:
+      'Synergy: the thermal lance ignites everything it sears, leaving it burning after the sweep (stacks: hotter burn)',
+    rarity: 'epic',
+    category: 'tactic',
+    maxStacks: BASE_MAX_STACKS,
+    requires: [
+      { id: 'lance', stacks: 2 },
+      { id: 'flame', stacks: 2 },
+    ],
+    apply: (stats) => ({ ...stats, thermiteLevel: stats.thermiteLevel + 1 }),
   },
   {
     id: 'mirv',

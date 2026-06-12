@@ -66,6 +66,8 @@ interface EnemyUnit {
   directionY: number
   isSlowed: boolean
   frozenRemainingMs: number
+  /** burning DoT — re-igniting refreshes the clock, the strongest dps wins */
+  burning: { dps: number; remainingMs: number; tickAccumulatorMs: number } | null
   /** bosses periodically deploy adds */
   spawnerAccumulatorMs: number
   /** shared timer for periodic behaviors: boss bolts, mender heals, elite regen */
@@ -759,6 +761,7 @@ export class GameScene extends Phaser.Scene {
       directionY: 0,
       isSlowed: false,
       frozenRemainingMs: 0,
+      burning: null,
       spawnerAccumulatorMs: 0,
       attackAccumulatorMs: 0,
       hasShield: false,
@@ -823,6 +826,7 @@ export class GameScene extends Phaser.Scene {
     this.updateAirstrike({ delta })
     this.updateBfg({ delta })
     this.updateLanceSweeps({ delta })
+    this.updateBurning({ delta })
     this.updateMines({ delta })
     this.updateOrbitalLaser({ delta })
     this.updateStormFront({ delta })
@@ -976,6 +980,7 @@ export class GameScene extends Phaser.Scene {
       directionY: Math.sin(fallAngle),
       isSlowed: false,
       frozenRemainingMs: 0,
+      burning: null,
       spawnerAccumulatorMs: 0,
       attackAccumulatorMs: 0,
       hasShield: definition.kind === 'warden',
@@ -1643,6 +1648,8 @@ export class GameScene extends Phaser.Scene {
 
     const damage =
       this.stats.damage * (FLAME.baseDamageMult + FLAME.damageMultPerLevel * (level - 1))
+    const burnDps =
+      this.stats.damage * (FLAME.burnDpsMultBase + FLAME.burnDpsMultPerLevel * (level - 1))
     for (const enemy of this.enemies) {
       if (enemy.isDead === true) {
         continue
@@ -1655,6 +1662,7 @@ export class GameScene extends Phaser.Scene {
       const offAxis = Math.abs(Phaser.Math.Angle.Wrap(Math.atan2(deltaY, deltaX) - aimAngle))
       if (offAxis <= FLAME.coneHalfAngleRad) {
         this.damageEnemy({ enemy, amount: damage, source: 'flame' })
+        this.igniteEnemy({ enemy, dps: burnDps })
       }
     }
 
@@ -1687,6 +1695,102 @@ export class GameScene extends Phaser.Scene {
       })
     }
     return true
+  }
+
+  // ── burning ────────────────────────────────────────────────────────
+
+  /** apply or refresh a burn — the strongest dps wins, the clock always resets */
+  private igniteEnemy({ enemy, dps }: { enemy: EnemyUnit; dps: number }): void {
+    if (enemy.isDead === true || dps <= 0) {
+      return
+    }
+    if (enemy.burning === null) {
+      enemy.burning = { dps, remainingMs: FLAME.burnDurationMs, tickAccumulatorMs: 0 }
+    } else {
+      enemy.burning.dps = Math.max(enemy.burning.dps, dps)
+      enemy.burning.remainingMs = FLAME.burnDurationMs
+    }
+  }
+
+  private updateBurning({ delta }: { delta: number }): void {
+    for (const enemy of this.enemies) {
+      if (enemy.isDead === true || enemy.burning === null) {
+        continue
+      }
+      const burning = enemy.burning
+      burning.remainingMs -= delta
+      burning.tickAccumulatorMs += delta
+      while (burning.tickAccumulatorMs >= FLAME.burnTickMs && enemy.isDead === false) {
+        burning.tickAccumulatorMs -= FLAME.burnTickMs
+        this.spawnEmber({ enemy })
+        this.damageEnemy({
+          enemy,
+          amount: burning.dps * (FLAME.burnTickMs / 1_000),
+          source: 'burn',
+          canCrit: false,
+        })
+      }
+      if (enemy.isDead === false && burning.remainingMs <= 0) {
+        enemy.burning = null
+      }
+    }
+  }
+
+  /** a fleck of fire drifting up off a burning invader */
+  private spawnEmber({ enemy }: { enemy: EnemyUnit }): void {
+    const ember = this.add
+      .circle(
+        enemy.image.x + (Math.random() * 2 - 1) * enemy.radius * 0.7,
+        enemy.image.y + (Math.random() * 2 - 1) * enemy.radius * 0.5,
+        2 + Math.random() * 2,
+        Math.random() < 0.5 ? 0xfb923c : 0xfde047,
+        0.9,
+      )
+      .setDepth(DEPTHS.effects)
+    this.tweens.add({
+      targets: ember,
+      y: ember.y - 14 - Math.random() * 12,
+      alpha: 0,
+      duration: 380,
+      ease: 'Cubic.easeOut',
+      onComplete: () => {
+        ember.destroy()
+      },
+    })
+  }
+
+  /** wildfire synergy: a burning casualty's fire leaps to everything nearby */
+  private spreadWildfire({ from }: { from: EnemyUnit }): void {
+    const burning = from.burning
+    if (burning === null) {
+      return
+    }
+    const radius =
+      SYNERGIES.wildfire.spreadRadiusBase +
+      SYNERGIES.wildfire.spreadRadiusPerLevel * (this.stats.wildfireLevel - 1)
+    const ring = this.add
+      .circle(from.image.x, from.image.y, 10)
+      .setStrokeStyle(2, 0xfb923c, 0.8)
+      .setDepth(DEPTHS.effects)
+    this.tweens.add({
+      targets: ring,
+      radius,
+      alpha: 0,
+      duration: 320,
+      ease: 'Cubic.easeOut',
+      onComplete: () => {
+        ring.destroy()
+      },
+    })
+    for (const enemy of this.enemies) {
+      if (enemy.isDead === true || enemy === from) {
+        continue
+      }
+      const distanceSq = (enemy.image.x - from.image.x) ** 2 + (enemy.image.y - from.image.y) ** 2
+      if (distanceSq <= (radius + enemy.radius) ** 2) {
+        this.igniteEnemy({ enemy, dps: burning.dps })
+      }
+    }
   }
 
   private checkFlakFuses(): void {
@@ -2013,6 +2117,13 @@ export class GameScene extends Phaser.Scene {
     })
     this.shakeCamera({ durationMs: 90, intensity: 0.003 })
 
+    // napalm warheads synergy: the blast zone is soaked in burning fuel
+    const napalmDps =
+      this.stats.napalmLevel > 0
+        ? this.stats.damage *
+          (SYNERGIES.napalm.burnDpsMultBase +
+            SYNERGIES.napalm.burnDpsMultPerLevel * (this.stats.napalmLevel - 1))
+        : 0
     for (const enemy of this.enemies) {
       if (enemy.isDead === true) {
         continue
@@ -2020,6 +2131,7 @@ export class GameScene extends Phaser.Scene {
       const distanceSq = (enemy.image.x - blastX) ** 2 + (enemy.image.y - blastY) ** 2
       if (distanceSq <= (rocket.blastRadius + enemy.radius) ** 2) {
         this.damageEnemy({ enemy, amount: rocket.damage, source: 'rocket' })
+        this.igniteEnemy({ enemy, dps: napalmDps })
       }
     }
 
@@ -2991,6 +3103,16 @@ export class GameScene extends Phaser.Scene {
       if (blocker !== null && sweep.hitEnemies.has(blocker) === false) {
         sweep.hitEnemies.add(blocker)
         this.damageEnemy({ enemy: blocker, amount: sweep.damage, source: 'lance' })
+        // thermite beam synergy: everything the lance sears keeps burning
+        if (this.stats.thermiteLevel > 0) {
+          this.igniteEnemy({
+            enemy: blocker,
+            dps:
+              this.stats.damage *
+              (SYNERGIES.thermite.burnDpsMultBase +
+                SYNERGIES.thermite.burnDpsMultPerLevel * (this.stats.thermiteLevel - 1)),
+          })
+        }
       }
     }
     this.sweeps = this.sweeps.filter((sweep) => sweep.isDead === false)
@@ -3856,6 +3978,16 @@ export class GameScene extends Phaser.Scene {
           canCrit: bullet.source !== 'main',
           isPreRolledCrit: bullet.isCrit,
         })
+        // incendiary rounds synergy: tracer ammo sets its targets burning
+        if (this.stats.incendiaryLevel > 0 && bullet.source === 'main') {
+          this.igniteEnemy({
+            enemy,
+            dps:
+              this.stats.damage *
+              (SYNERGIES.incendiary.burnDpsMultBase +
+                SYNERGIES.incendiary.burnDpsMultPerLevel * (this.stats.incendiaryLevel - 1)),
+          })
+        }
         if (bullet.pierceLeft <= 0) {
           bullet.isDead = true
           break
@@ -3954,6 +4086,11 @@ export class GameScene extends Phaser.Scene {
       this.kills += 1
       soundEngine.play({ name: 'kill' })
       this.spawnDeathBurst({ enemy })
+
+      // wildfire synergy: a burning casualty's fire leaps to its neighbors
+      if (this.stats.wildfireLevel > 0 && enemy.burning !== null) {
+        this.spreadWildfire({ from: enemy })
+      }
 
       // killable training dummies pop back up at their station shortly after
       if (this.isSandbox === true && enemy.definition.kind === 'dummy') {
