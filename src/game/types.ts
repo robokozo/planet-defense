@@ -25,6 +25,8 @@ export interface RunStats {
   rerollsPerRun: number
   /** card banishes available per run — base 0, only paragon nodes grant them */
   banishesPerRun: number
+  /** the capacitor is a paragon keystone unlock, like the aegis shield */
+  hasCapacitor: boolean
   /** multiplier on how fast kills charge the capacitor */
   capacitorChargeRate: number
   /** all-weapon damage bonus while a surge is active (0.25 = +25%) */
@@ -99,8 +101,8 @@ export interface HudSnapshot {
   wave: number
   kills: number
   elapsedMs: number
-  /** capacitor fill fraction, 0..1 */
-  capacitor: number
+  /** capacitor fill fraction 0..1, or null when the keystone isn't unlocked */
+  capacitor: number | null
   /** all weapons are surging — the capacitor is discharging */
   isSurging: boolean
   /** null unless a mothership is on the field */

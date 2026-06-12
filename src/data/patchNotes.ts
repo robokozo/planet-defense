@@ -27,11 +27,11 @@ export const PATCH_NOTES: Array<PatchEntry> = [
     notes: [
       {
         kind: 'new',
-        text: 'The Capacitor: every kill charges a battery (the amber bar under your XP). At full charge, every weapon surges with +25% damage while the battery discharges — then it starts filling again. Bosses dump a big chunk of charge on death.',
+        text: 'The Reactor branch — a seventh spoke on the paragon board (🔋), crowned by the Capacitor Array keystone. Like the Aegis Protocol, it unlocks a whole new system: kills charge a battery (the amber bar under your XP), and at full charge every weapon surges with +25% damage while it discharges. Bosses dump a big chunk of charge on death.',
       },
       {
         kind: 'new',
-        text: 'The Reactor branch — a seventh spoke on the paragon board (🔋): Charge Coils speed up the capacitor, Surge Regulators make surges harder and longer, and the Overcharge Core expansion starts every run half charged.',
+        text: 'Charge Coils minors speed up the capacitor, and the Overcharge Core expansion starts every run half charged with harder surges.',
       },
       {
         kind: 'new',
@@ -39,7 +39,7 @@ export const PATCH_NOTES: Array<PatchEntry> = [
       },
       {
         kind: 'new',
-        text: 'Compound Reactor keystone: unspent stardust earns 5% interest at the end of every run — savers are rewarded for sitting on a bank.',
+        text: 'Compound Interest notable: unspent stardust earns 5% interest at the end of every run — savers are rewarded for sitting on a bank.',
       },
     ],
   },

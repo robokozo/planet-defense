@@ -32,6 +32,7 @@ export type MetaStat =
   | 'stardustPercent'
   | 'rerollFlat'
   | 'banishFlat'
+  | 'capacitorUnlockFlat'
   | 'capacitorChargePercent'
   | 'surgeDamagePercent'
   | 'surgeDurationMsFlat'
@@ -391,17 +392,15 @@ const BRANCH_DEFINITIONS: Array<BranchDefinition> = [
       },
     },
     notable: {
-      name: 'Surge Regulators',
-      description: 'Surges hit +15% harder and last +2s',
-      effects: [
-        { stat: 'surgeDamagePercent', amount: 15 },
-        { stat: 'surgeDurationMsFlat', amount: 2_000 },
-      ],
+      name: 'Compound Interest',
+      description: 'Unspent stardust earns 5% interest at the end of every run',
+      effects: [{ stat: 'interestPercentFlat', amount: 5 }],
     },
     keystone: {
-      name: 'Compound Reactor',
-      description: 'Keystone: unspent stardust earns 5% interest at the end of every run',
-      effects: [{ stat: 'interestPercentFlat', amount: 5 }],
+      name: 'Capacitor Array',
+      description:
+        'Keystone: unlock the capacitor — kills charge a battery, and at full charge every weapon surges with bonus damage while it discharges',
+      effects: [{ stat: 'capacitorUnlockFlat', amount: 1 }],
     },
   },
 ]
@@ -755,6 +754,7 @@ export function buildStartingStats({
     banishesPerRun: BASE_RUN_STATS.banishesPerRun + valueOf('banishFlat'),
     luck: BASE_RUN_STATS.luck * (1 + valueOf('luckPercent') / 100),
     xpMultiplier: BASE_RUN_STATS.xpMultiplier * (1 + valueOf('xpPercent') / 100),
+    hasCapacitor: valueOf('capacitorUnlockFlat') > 0,
     capacitorChargeRate:
       BASE_RUN_STATS.capacitorChargeRate * (1 + valueOf('capacitorChargePercent') / 100),
     surgeDamageBonus: BASE_RUN_STATS.surgeDamageBonus + valueOf('surgeDamagePercent') / 100,

@@ -453,7 +453,7 @@ export class GameScene extends Phaser.Scene {
     this.buildingXs = BUILDING_X_FRACTIONS.map((fraction) => Math.round(fraction * this.arenaWidth))
     this.stats = { ...data.startingStats }
     this.stardustMultiplier = data.stardustMultiplier
-    this.capacitorCharge = this.stats.capacitorStartFraction
+    this.capacitorCharge = this.stats.hasCapacitor === true ? this.stats.capacitorStartFraction : 0
     this.runRerollsLeft = this.stats.rerollsPerRun
     this.runBanishesLeft = this.stats.banishesPerRun
     this.hp = this.stats.maxHp
@@ -695,7 +695,7 @@ export class GameScene extends Phaser.Scene {
     this.stats = { ...stats }
     this.sandboxLayout = layout
     this.upgradeStacks = new Map(Object.entries(cardStacks).filter(([, stacks]) => stacks > 0))
-    this.capacitorCharge = this.stats.capacitorStartFraction
+    this.capacitorCharge = this.stats.hasCapacitor === true ? this.stats.capacitorStartFraction : 0
     this.surgeRemainingMs = 0
     this.hp = this.stats.maxHp
     this.elapsedMs = 0
@@ -1786,6 +1786,9 @@ export class GameScene extends Phaser.Scene {
 
   /** full battery → all weapons surge while it visibly discharges, then recharge begins */
   private updateCapacitor({ delta }: { delta: number }): void {
+    if (this.stats.hasCapacitor === false) {
+      return
+    }
     if (this.surgeRemainingMs > 0) {
       this.surgeRemainingMs -= delta
       this.capacitorCharge = Math.max(0, this.surgeRemainingMs / this.stats.surgeDurationMs)
@@ -4601,7 +4604,7 @@ export class GameScene extends Phaser.Scene {
       this.spawnDeathBurst({ enemy })
 
       // every kill feeds the capacitor (no charging while it discharges)
-      if (this.surgeRemainingMs <= 0) {
+      if (this.stats.hasCapacitor === true && this.surgeRemainingMs <= 0) {
         const chargeGain =
           (enemy.definition.kind === 'mothership'
             ? CAPACITOR.bossKillBonus
@@ -4986,7 +4989,7 @@ export class GameScene extends Phaser.Scene {
         wave: this.wave,
         kills: this.kills,
         elapsedMs: this.elapsedMs,
-        capacitor: this.capacitorCharge,
+        capacitor: this.stats.hasCapacitor === true ? this.capacitorCharge : null,
         isSurging: this.surgeRemainingMs > 0,
         boss,
       },

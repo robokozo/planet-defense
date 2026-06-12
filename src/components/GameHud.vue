@@ -60,8 +60,8 @@ const elapsedLabel = computed(() => {
       <p class="mt-0.5 text-center text-xs text-sky-300/80">Level {{ hud.level }}</p>
     </div>
 
-    <!-- the capacitor: kills fill it; at full charge every weapon surges -->
-    <div class="mx-auto w-full max-w-xs">
+    <!-- the capacitor (keystone unlock): kills fill it; at full charge every weapon surges -->
+    <div v-if="hud.capacitor !== null" class="mx-auto w-full max-w-xs">
       <div
         class="h-1.5 overflow-hidden rounded-full border bg-slate-900/80"
         :class="hud.isSurging === true ? 'border-yellow-300/80' : 'border-amber-500/30'"

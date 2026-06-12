@@ -101,6 +101,7 @@ export const BASE_RUN_STATS: RunStats = {
   weaponCooldownFactor: 1,
   rerollsPerRun: 1,
   banishesPerRun: 0,
+  hasCapacitor: false,
   capacitorChargeRate: 1,
   surgeDamageBonus: 0.25,
   surgeDurationMs: 6_000,
