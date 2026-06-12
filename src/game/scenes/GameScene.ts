@@ -5029,6 +5029,7 @@ export class GameScene extends Phaser.Scene {
         kills: this.kills,
         elapsedMs: this.elapsedMs,
         capacitor: this.stats.hasCapacitor === true ? this.capacitorCharge : null,
+        cardStacks: Object.fromEntries(this.upgradeStacks),
         isSurging: this.surgeRemainingMs > 0,
         boss,
       },

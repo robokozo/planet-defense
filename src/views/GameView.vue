@@ -213,6 +213,7 @@ onUnmounted(() => {
     <LevelUpOverlay
       v-if="levelUpOffer !== null"
       :offer="levelUpOffer"
+      :stacks="hud?.cardStacks ?? null"
       @choose="(payload) => chooseUpgrade(payload)"
       @reroll="() => requestReroll()"
       @banish="(payload) => requestBanish(payload)"
@@ -220,6 +221,10 @@ onUnmounted(() => {
 
     <GameOverOverlay v-if="runResult !== null" :result="runResult" @restart="() => restartRun()" />
 
-    <SynergyGlossary v-if="isGlossaryOpen === true" @close="closeGlossary()" />
+    <SynergyGlossary
+      v-if="isGlossaryOpen === true"
+      :stacks="hud?.cardStacks ?? null"
+      @close="closeGlossary()"
+    />
   </main>
 </template>

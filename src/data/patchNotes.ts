@@ -22,6 +22,21 @@ export interface PatchEntry {
 export const PATCH_NOTES: Array<PatchEntry> = [
   {
     date: '2026-06-12',
+    title: 'Field Notes',
+    blurb: 'The synergy glossary learns what you are carrying.',
+    notes: [
+      {
+        kind: 'new',
+        text: 'During a run, the synergy glossary now highlights your arsenal: synergies you own glow green, ones that can appear in offers right now glow and pulse, and every parent shows your live progress toward its tier (★1/2).',
+      },
+      {
+        kind: 'new',
+        text: 'The glossary is also browsable from the home screen, next to the patch notes.',
+      },
+    ],
+  },
+  {
+    date: '2026-06-12',
     title: 'Sharper Teeth',
     blurb: 'The opening fight gets fair, and everything hits more visibly.',
     notes: [

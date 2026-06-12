@@ -105,6 +105,8 @@ export interface HudSnapshot {
   elapsedMs: number
   /** capacitor fill fraction 0..1, or null when the keystone isn't unlocked */
   capacitor: number | null
+  /** current card stacks by upgrade id — drives glossary highlighting */
+  cardStacks: Record<string, number>
   /** all weapons are surging — the capacitor is discharging */
   isSurging: boolean
   /** null unless a mothership is on the field */

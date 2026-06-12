@@ -1,12 +1,14 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 
+import SynergyGlossary from '@/components/SynergyGlossary.vue'
 import { damageNumbersEnabled, screenShakeEnabled } from '@/game/settings'
 import { soundEngine } from '@/game/sound'
 import { useMetaStore } from '@/stores/metaStore'
 
 const metaStore = useMetaStore()
 
+const isGlossaryOpen = ref(false)
 const isConfirmingReset = ref(false)
 
 function onResetClick(): void {
@@ -155,6 +157,13 @@ function onImportSave(): void {
         >
           📜 Patch notes
         </RouterLink>
+        <button
+          type="button"
+          class="cursor-pointer text-xs font-semibold text-slate-500 transition hover:text-slate-300"
+          @click="isGlossaryOpen = true"
+        >
+          ⛓ Synergies
+        </button>
       </div>
 
       <div
@@ -286,5 +295,7 @@ function onImportSave(): void {
         </div>
       </div>
     </section>
+
+    <SynergyGlossary v-if="isGlossaryOpen === true" @close="isGlossaryOpen = false" />
   </main>
 </template>

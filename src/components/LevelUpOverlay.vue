@@ -4,7 +4,11 @@ import { ref } from 'vue'
 import SynergyGlossary from '@/components/SynergyGlossary.vue'
 import type { LevelUpOffer, UpgradeRarity } from '@/game/types'
 
-const { offer } = defineProps<{ offer: LevelUpOffer }>()
+const { offer, stacks = null } = defineProps<{
+  offer: LevelUpOffer
+  /** current card stacks, for glossary highlighting */
+  stacks?: Record<string, number> | null
+}>()
 
 const isGlossaryOpen = ref(false)
 
@@ -125,6 +129,10 @@ const RARITY_LABEL_CLASSES: Record<UpgradeRarity, string> = {
       </div>
     </div>
 
-    <SynergyGlossary v-if="isGlossaryOpen === true" @close="isGlossaryOpen = false" />
+    <SynergyGlossary
+      v-if="isGlossaryOpen === true"
+      :stacks="stacks"
+      @close="isGlossaryOpen = false"
+    />
   </div>
 </template>
