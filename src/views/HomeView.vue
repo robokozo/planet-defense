@@ -1,11 +1,17 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { onMounted, ref } from 'vue'
 
 import { damageNumbersEnabled, screenShakeEnabled } from '@/game/settings'
 import { soundEngine } from '@/game/sound'
 import { useMetaStore } from '@/stores/metaStore'
 
 const metaStore = useMetaStore()
+
+// trickle cells bank their stardust whenever the player comes home
+const passiveClaimed = ref(0)
+onMounted(() => {
+  passiveClaimed.value = metaStore.claimPassiveStardust()
+})
 
 const isConfirmingReset = ref(false)
 
@@ -93,6 +99,10 @@ function onImportSave(): void {
         <span class="text-sm text-sky-200/70">prestige</span>
       </span>
     </section>
+
+    <p v-if="passiveClaimed > 0" class="-mt-6 text-sm font-semibold text-amber-300/90">
+      🔋 Your trickle cells generated +{{ passiveClaimed }} stardust while you were away
+    </p>
 
     <p v-if="metaStore.isParagonComplete === true" class="-mt-6 text-sm font-semibold text-sky-300">
       The paragon board is complete — prestige awaits in the Paragon Tree.

@@ -53,6 +53,21 @@ export const STARDUST = {
   perLevel: 2,
 } as const
 
+/**
+ * The capacitor: kills charge a battery; at full charge every weapon surges
+ * (bonus damage) while it discharges, then charging starts over. The reactor
+ * paragon branch improves charge rate, surge strength, and duration.
+ */
+export const CAPACITOR = {
+  /** fraction of the battery one kill fills, before charge-rate bonuses */
+  chargePerKill: 0.02,
+  /** bosses dump a chunk of charge on death */
+  bossKillBonus: 0.2,
+} as const
+
+/** passive stardust accrues while away, but only up to this many hours bank up */
+export const PASSIVE_EARNING_CAP_HOURS = 12
+
 export const NOVA = {
   maxRadius: 240,
   expandDurationMs: 450,
@@ -86,6 +101,10 @@ export const BASE_RUN_STATS: RunStats = {
   weaponCooldownFactor: 1,
   rerollsPerRun: 1,
   banishesPerRun: 0,
+  capacitorChargeRate: 1,
+  surgeDamageBonus: 0.25,
+  surgeDurationMs: 6_000,
+  capacitorStartFraction: 0,
   novaIntervalMs: null,
   novaDamage: 40,
   aegisIntervalMs: null,

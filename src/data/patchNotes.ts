@@ -22,6 +22,29 @@ export interface PatchEntry {
 export const PATCH_NOTES: Array<PatchEntry> = [
   {
     date: '2026-06-12',
+    title: 'The Reactor Spoke',
+    blurb: 'A seventh paragon branch, and the battlefield gets a battery.',
+    notes: [
+      {
+        kind: 'new',
+        text: 'The Capacitor: every kill charges a battery (the amber bar under your XP). At full charge, every weapon surges with +25% damage while the battery discharges — then it starts filling again. Bosses dump a big chunk of charge on death.',
+      },
+      {
+        kind: 'new',
+        text: 'The Reactor branch — a seventh spoke on the paragon board (🔋): Charge Coils speed up the capacitor, Surge Regulators make surges harder and longer, and the Overcharge Core expansion starts every run half charged.',
+      },
+      {
+        kind: 'new',
+        text: 'Passive earning: Trickle Cell nodes generate stardust per real-world hour, banked whenever you return to the home screen (up to 12 hours accrue while away).',
+      },
+      {
+        kind: 'new',
+        text: 'Compound Reactor keystone: unspent stardust earns 5% interest at the end of every run — savers are rewarded for sitting on a bank.',
+      },
+    ],
+  },
+  {
+    date: '2026-06-12',
     title: 'Priced by the Lab',
     blurb: 'The legendary expansion nodes now cost what they measure.',
     notes: [

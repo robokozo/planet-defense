@@ -60,6 +60,26 @@ const elapsedLabel = computed(() => {
       <p class="mt-0.5 text-center text-xs text-sky-300/80">Level {{ hud.level }}</p>
     </div>
 
+    <!-- the capacitor: kills fill it; at full charge every weapon surges -->
+    <div class="mx-auto w-full max-w-xs">
+      <div
+        class="h-1.5 overflow-hidden rounded-full border bg-slate-900/80"
+        :class="hud.isSurging === true ? 'border-yellow-300/80' : 'border-amber-500/30'"
+      >
+        <div
+          class="h-full transition-[width] duration-150"
+          :class="hud.isSurging === true ? 'animate-pulse bg-yellow-300' : 'bg-amber-400/80'"
+          :style="{ width: `${Math.round(hud.capacitor * 100)}%` }"
+        />
+      </div>
+      <p
+        v-if="hud.isSurging === true"
+        class="mt-0.5 animate-pulse text-center text-xs font-bold tracking-widest text-yellow-300"
+      >
+        ⚡ SURGE
+      </p>
+    </div>
+
     <div v-if="hud.boss !== null" class="mx-auto w-full max-w-md">
       <p class="mb-0.5 text-center text-xs font-bold tracking-widest text-red-400">MOTHERSHIP</p>
       <div class="h-2.5 overflow-hidden rounded-full border border-red-500/50 bg-slate-900/80">

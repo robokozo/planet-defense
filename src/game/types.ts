@@ -25,6 +25,13 @@ export interface RunStats {
   rerollsPerRun: number
   /** card banishes available per run — base 0, only paragon nodes grant them */
   banishesPerRun: number
+  /** multiplier on how fast kills charge the capacitor */
+  capacitorChargeRate: number
+  /** all-weapon damage bonus while a surge is active (0.25 = +25%) */
+  surgeDamageBonus: number
+  surgeDurationMs: number
+  /** fraction of the capacitor pre-filled at run start (reactor expansion) */
+  capacitorStartFraction: number
   /** null means novas are not unlocked for this run */
   novaIntervalMs: number | null
   novaDamage: number
@@ -92,6 +99,10 @@ export interface HudSnapshot {
   wave: number
   kills: number
   elapsedMs: number
+  /** capacitor fill fraction, 0..1 */
+  capacitor: number
+  /** all weapons are surging — the capacitor is discharging */
+  isSurging: boolean
   /** null unless a mothership is on the field */
   boss: { hp: number; maxHp: number } | null
 }

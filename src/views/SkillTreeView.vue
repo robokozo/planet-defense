@@ -76,6 +76,7 @@ const BRANCH_COLORS: Record<SkillNode['branch'], string> = {
   defense: '#34d399',
   sensors: '#a78bfa',
   fortune: '#fbbf24',
+  reactor: '#f472b6',
 }
 
 /** family glyph drawn inside every node */
@@ -87,6 +88,7 @@ const BRANCH_ICONS: Record<SkillNode['branch'], string> = {
   defense: '🛡️',
   sensors: '📡',
   fortune: '🎲',
+  reactor: '🔋',
 }
 
 /** node color = tier, matching the card rarity palette */

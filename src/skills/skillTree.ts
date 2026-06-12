@@ -11,6 +11,7 @@ export type SkillBranch =
   | 'defense'
   | 'sensors'
   | 'fortune'
+  | 'reactor'
 
 export type MetaStat =
   | 'damagePercent'
@@ -31,6 +32,12 @@ export type MetaStat =
   | 'stardustPercent'
   | 'rerollFlat'
   | 'banishFlat'
+  | 'capacitorChargePercent'
+  | 'surgeDamagePercent'
+  | 'surgeDurationMsFlat'
+  | 'capacitorStartPercent'
+  | 'passivePerHourFlat'
+  | 'interestPercentFlat'
 
 export interface SkillEffect {
   stat: MetaStat
@@ -221,7 +228,7 @@ const BRANCH_DEFINITIONS: Array<BranchDefinition> = [
   },
   {
     id: 'arsenal',
-    angleDeg: 60,
+    angleDeg: 51.43,
     minors: {
       primary: {
         name: 'Rifled Barrels',
@@ -247,7 +254,7 @@ const BRANCH_DEFINITIONS: Array<BranchDefinition> = [
   },
   {
     id: 'tech',
-    angleDeg: 120,
+    angleDeg: 102.86,
     minors: {
       primary: {
         name: 'Capacitor Banks',
@@ -276,7 +283,7 @@ const BRANCH_DEFINITIONS: Array<BranchDefinition> = [
   },
   {
     id: 'defense',
-    angleDeg: 180,
+    angleDeg: 154.29,
     minors: {
       primary: {
         name: 'Basalt Crust',
@@ -305,7 +312,7 @@ const BRANCH_DEFINITIONS: Array<BranchDefinition> = [
   },
   {
     id: 'sensors',
-    angleDeg: 240,
+    angleDeg: 205.71,
     minors: {
       primary: {
         name: 'Wide-Band Radar',
@@ -337,7 +344,7 @@ const BRANCH_DEFINITIONS: Array<BranchDefinition> = [
   },
   {
     id: 'fortune',
-    angleDeg: 300,
+    angleDeg: 257.14,
     minors: {
       primary: {
         name: 'Survey Probes',
@@ -366,6 +373,35 @@ const BRANCH_DEFINITIONS: Array<BranchDefinition> = [
         { stat: 'xpPercent', amount: 20 },
         { stat: 'luckPercent', amount: 15 },
       ],
+    },
+  },
+  {
+    id: 'reactor',
+    angleDeg: 308.57,
+    minors: {
+      primary: {
+        name: 'Charge Coils',
+        description: '+5% capacitor charge rate',
+        effects: [{ stat: 'capacitorChargePercent', amount: 5 }],
+      },
+      secondary: {
+        name: 'Trickle Cells',
+        description: '+2 stardust generated per hour, even while away',
+        effects: [{ stat: 'passivePerHourFlat', amount: 2 }],
+      },
+    },
+    notable: {
+      name: 'Surge Regulators',
+      description: 'Surges hit +15% harder and last +2s',
+      effects: [
+        { stat: 'surgeDamagePercent', amount: 15 },
+        { stat: 'surgeDurationMsFlat', amount: 2_000 },
+      ],
+    },
+    keystone: {
+      name: 'Compound Reactor',
+      description: 'Keystone: unspent stardust earns 5% interest at the end of every run',
+      effects: [{ stat: 'interestPercentFlat', amount: 5 }],
     },
   },
 ]
@@ -549,7 +585,7 @@ function buildSkillNodes(): Array<SkillNode> {
       tier: 'legendary',
       branch: 'arsenal',
       cost: 3_400,
-      ...polarPoint({ radius: EXPANSION_RADIUS, angleDeg: 60 }),
+      ...polarPoint({ radius: EXPANSION_RADIUS, angleDeg: 51.43 }),
       connections: [],
       effects: [{ stat: 'weaponSlotFlat', amount: 1 }],
     },
@@ -561,7 +597,7 @@ function buildSkillNodes(): Array<SkillNode> {
       tier: 'legendary',
       branch: 'tech',
       cost: 4_000,
-      ...polarPoint({ radius: EXPANSION_RADIUS, angleDeg: 120 }),
+      ...polarPoint({ radius: EXPANSION_RADIUS, angleDeg: 102.86 }),
       connections: [],
       effects: [{ stat: 'weaponTierFlat', amount: 1 }],
     },
@@ -573,7 +609,7 @@ function buildSkillNodes(): Array<SkillNode> {
       tier: 'legendary',
       branch: 'defense',
       cost: 3_000,
-      ...polarPoint({ radius: EXPANSION_RADIUS, angleDeg: 180 }),
+      ...polarPoint({ radius: EXPANSION_RADIUS, angleDeg: 154.29 }),
       connections: [],
       effects: [{ stat: 'cannonFlat', amount: 1 }],
     },
@@ -585,7 +621,7 @@ function buildSkillNodes(): Array<SkillNode> {
       tier: 'legendary',
       branch: 'sensors',
       cost: 3_400,
-      ...polarPoint({ radius: EXPANSION_RADIUS, angleDeg: 240 }),
+      ...polarPoint({ radius: EXPANSION_RADIUS, angleDeg: 205.71 }),
       connections: [],
       effects: [{ stat: 'weaponSlotFlat', amount: 1 }],
     },
@@ -597,9 +633,24 @@ function buildSkillNodes(): Array<SkillNode> {
       tier: 'legendary',
       branch: 'fortune',
       cost: 4_000,
-      ...polarPoint({ radius: EXPANSION_RADIUS, angleDeg: 300 }),
+      ...polarPoint({ radius: EXPANSION_RADIUS, angleDeg: 257.14 }),
       connections: [],
       effects: [{ stat: 'weaponTierFlat', amount: 1 }],
+    },
+    {
+      id: 'reactor-expansion',
+      name: 'Overcharge Core',
+      description: 'Start every run with the capacitor half charged, and surges hit +25% harder',
+      kind: 'notable',
+      tier: 'legendary',
+      branch: 'reactor',
+      cost: 3_000,
+      ...polarPoint({ radius: EXPANSION_RADIUS, angleDeg: 308.57 }),
+      connections: [],
+      effects: [
+        { stat: 'capacitorStartPercent', amount: 50 },
+        { stat: 'surgeDamagePercent', amount: 25 },
+      ],
     },
   ]
   for (const expansion of expansionNodes) {
@@ -704,6 +755,14 @@ export function buildStartingStats({
     banishesPerRun: BASE_RUN_STATS.banishesPerRun + valueOf('banishFlat'),
     luck: BASE_RUN_STATS.luck * (1 + valueOf('luckPercent') / 100),
     xpMultiplier: BASE_RUN_STATS.xpMultiplier * (1 + valueOf('xpPercent') / 100),
+    capacitorChargeRate:
+      BASE_RUN_STATS.capacitorChargeRate * (1 + valueOf('capacitorChargePercent') / 100),
+    surgeDamageBonus: BASE_RUN_STATS.surgeDamageBonus + valueOf('surgeDamagePercent') / 100,
+    surgeDurationMs: BASE_RUN_STATS.surgeDurationMs + valueOf('surgeDurationMsFlat'),
+    capacitorStartFraction: Math.min(
+      1,
+      BASE_RUN_STATS.capacitorStartFraction + valueOf('capacitorStartPercent') / 100,
+    ),
   }
 }
 
@@ -714,4 +773,24 @@ export function stardustMultiplierFrom({
 }): number {
   const totals = aggregateEffects({ unlockedNodeIds })
   return 1 + (totals.get('stardustPercent') ?? 0) / 100
+}
+
+/** stardust generated per real-world hour by the reactor's trickle cells */
+export function passiveStardustPerHourFrom({
+  unlockedNodeIds,
+}: {
+  unlockedNodeIds: Array<string>
+}): number {
+  const totals = aggregateEffects({ unlockedNodeIds })
+  return totals.get('passivePerHourFlat') ?? 0
+}
+
+/** interest rate (percent) paid on unspent stardust at the end of every run */
+export function interestPercentFrom({
+  unlockedNodeIds,
+}: {
+  unlockedNodeIds: Array<string>
+}): number {
+  const totals = aggregateEffects({ unlockedNodeIds })
+  return totals.get('interestPercentFlat') ?? 0
 }

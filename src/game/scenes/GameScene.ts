@@ -7,6 +7,7 @@ import {
   BATTERY,
   BFG,
   BULLET,
+  CAPACITOR,
   CHAIN,
   CLOUD,
   DEVOURER,
@@ -381,6 +382,10 @@ export class GameScene extends Phaser.Scene {
   private stormAccumulatorMs = 0
   private aegisAccumulatorMs = 0
   private hudAccumulatorMs = 0
+  /** the capacitor: kills fill it (0..1); at full charge every weapon surges */
+  private capacitorCharge = 0
+  private surgeRemainingMs = 0
+  private surgePuffAccumulatorMs = 0
 
   private upgradeStacks = new Map<string, number>()
   private pendingLevelUps = 0
@@ -448,6 +453,7 @@ export class GameScene extends Phaser.Scene {
     this.buildingXs = BUILDING_X_FRACTIONS.map((fraction) => Math.round(fraction * this.arenaWidth))
     this.stats = { ...data.startingStats }
     this.stardustMultiplier = data.stardustMultiplier
+    this.capacitorCharge = this.stats.capacitorStartFraction
     this.runRerollsLeft = this.stats.rerollsPerRun
     this.runBanishesLeft = this.stats.banishesPerRun
     this.hp = this.stats.maxHp
@@ -689,6 +695,8 @@ export class GameScene extends Phaser.Scene {
     this.stats = { ...stats }
     this.sandboxLayout = layout
     this.upgradeStacks = new Map(Object.entries(cardStacks).filter(([, stacks]) => stacks > 0))
+    this.capacitorCharge = this.stats.capacitorStartFraction
+    this.surgeRemainingMs = 0
     this.hp = this.stats.maxHp
     this.elapsedMs = 0
     this.damageBySource = new Map()
@@ -844,6 +852,7 @@ export class GameScene extends Phaser.Scene {
     this.updateBfg({ delta })
     this.updateLanceSweeps({ delta })
     this.updateBurning({ delta })
+    this.updateCapacitor({ delta })
     this.updateMines({ delta })
     this.updateOrbitalLaser({ delta })
     this.updateStormFront({ delta })
@@ -1771,6 +1780,51 @@ export class GameScene extends Phaser.Scene {
       })
     }
     return true
+  }
+
+  // ── capacitor ──────────────────────────────────────────────────────
+
+  /** full battery → all weapons surge while it visibly discharges, then recharge begins */
+  private updateCapacitor({ delta }: { delta: number }): void {
+    if (this.surgeRemainingMs > 0) {
+      this.surgeRemainingMs -= delta
+      this.capacitorCharge = Math.max(0, this.surgeRemainingMs / this.stats.surgeDurationMs)
+      // golden exhaust streams off every cannon while the surge burns
+      this.surgePuffAccumulatorMs += delta
+      if (this.surgePuffAccumulatorMs >= 200) {
+        this.surgePuffAccumulatorMs = 0
+        for (const cannon of this.cannons) {
+          this.spawnExhaustPuff({ x: cannon.x, y: cannon.y - 18, color: 0xfde047 })
+        }
+      }
+      if (this.surgeRemainingMs <= 0) {
+        this.surgeRemainingMs = 0
+        this.capacitorCharge = 0
+      }
+      return
+    }
+    if (this.capacitorCharge >= 1) {
+      this.surgeRemainingMs = this.stats.surgeDurationMs
+      soundEngine.play({ name: 'levelup' })
+      this.shakeCamera({ durationMs: 200, intensity: 0.005 })
+      // the discharge flash: a golden ring bursting from every cannon
+      for (const cannon of this.cannons) {
+        const ring = this.add
+          .circle(cannon.x, cannon.y - 10, 12)
+          .setStrokeStyle(4, 0xfde047, 0.95)
+          .setDepth(DEPTHS.effects)
+        this.tweens.add({
+          targets: ring,
+          radius: 70,
+          alpha: 0,
+          duration: 450,
+          ease: 'Cubic.easeOut',
+          onComplete: () => {
+            ring.destroy()
+          },
+        })
+      }
+    }
   }
 
   // ── burning ────────────────────────────────────────────────────────
@@ -4526,6 +4580,10 @@ export class GameScene extends Phaser.Scene {
       finalAmount *=
         1 + SHATTERPOINT.baseBonus + SHATTERPOINT.bonusPerLevel * (this.stats.shatterLevel - 1)
     }
+    // capacitor surge: every weapon hits harder while the battery discharges
+    if (this.surgeRemainingMs > 0) {
+      finalAmount *= 1 + this.stats.surgeDamageBonus
+    }
     this.damageBySource.set(source, (this.damageBySource.get(source) ?? 0) + finalAmount)
     enemy.hp -= finalAmount
     this.spawnDamageNumber({ x: enemy.image.x, y: enemy.image.y, amount: finalAmount, isCrit })
@@ -4541,6 +4599,15 @@ export class GameScene extends Phaser.Scene {
       this.kills += 1
       soundEngine.play({ name: 'kill' })
       this.spawnDeathBurst({ enemy })
+
+      // every kill feeds the capacitor (no charging while it discharges)
+      if (this.surgeRemainingMs <= 0) {
+        const chargeGain =
+          (enemy.definition.kind === 'mothership'
+            ? CAPACITOR.bossKillBonus
+            : CAPACITOR.chargePerKill) * this.stats.capacitorChargeRate
+        this.capacitorCharge = Math.min(1, this.capacitorCharge + chargeGain)
+      }
 
       // wildfire synergy: a burning casualty's fire leaps to its neighbors
       if (this.stats.wildfireLevel > 0 && enemy.burning !== null) {
@@ -4919,6 +4986,8 @@ export class GameScene extends Phaser.Scene {
         wave: this.wave,
         kills: this.kills,
         elapsedMs: this.elapsedMs,
+        capacitor: this.capacitorCharge,
+        isSurging: this.surgeRemainingMs > 0,
         boss,
       },
     })
