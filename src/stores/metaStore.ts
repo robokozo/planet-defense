@@ -5,6 +5,7 @@ import { computed } from 'vue'
 import type { RunResult } from '@/game/types'
 import {
   ROOT_NODE_ID,
+  SKILL_NODES,
   SKILL_NODES_BY_ID,
   listAdjacentNodeIds,
   scaledNodeCost,
@@ -37,6 +38,7 @@ export const useMetaStore = defineStore('meta', () => {
       0,
     ),
   )
+  const prestigeLevel = useLocalStorage<number>('pd-prestige', 0)
 
   // saves from before a tree redesign reference node ids that no longer
   // exist: reset the tree and refund everything ever earned
@@ -106,11 +108,30 @@ export const useMetaStore = defineStore('meta', () => {
     unlockedNodeIds.value = [ROOT_NODE_ID]
   }
 
-  /** wipe the save entirely: stardust, tree, lifetime stats */
+  /** prestige unlocks only when every node on the paragon board is bought */
+  const isParagonComplete = computed(() => unlockedNodeIds.value.length >= SKILL_NODES.length)
+
+  /**
+   * Prestige: wipe stardust and the tree (no refund — the board is the price)
+   * and pull the view back one step. Lifetime stats and settings survive.
+   */
+  function prestige(): boolean {
+    if (isParagonComplete.value === false) {
+      return false
+    }
+    prestigeLevel.value += 1
+    stardust.value = 0
+    treeSpent.value = 0
+    unlockedNodeIds.value = [ROOT_NODE_ID]
+    return true
+  }
+
+  /** wipe the save entirely: stardust, tree, lifetime stats, prestige */
   function resetAllProgress(): void {
     stardust.value = 0
     unlockedNodeIds.value = [ROOT_NODE_ID]
     treeSpent.value = 0
+    prestigeLevel.value = 0
     lifetime.value = { ...DEFAULT_LIFETIME_STATS }
   }
 
@@ -121,6 +142,7 @@ export const useMetaStore = defineStore('meta', () => {
       stardust: stardust.value,
       unlockedNodeIds: unlockedNodeIds.value,
       treeSpent: treeSpent.value,
+      prestigeLevel: prestigeLevel.value,
       lifetime: lifetime.value,
     }
     return btoa(JSON.stringify(payload))
@@ -133,6 +155,7 @@ export const useMetaStore = defineStore('meta', () => {
         stardust?: number
         unlockedNodeIds?: Array<string>
         treeSpent?: number
+        prestigeLevel?: number
         lifetime?: LifetimeStats
       }
       if (
@@ -158,6 +181,7 @@ export const useMetaStore = defineStore('meta', () => {
               (sum, nodeId) => sum + (SKILL_NODES_BY_ID.get(nodeId)?.cost ?? 0),
               0,
             )
+      prestigeLevel.value = typeof payload.prestigeLevel === 'number' ? payload.prestigeLevel : 0
       lifetime.value = {
         runs: Number(payload.lifetime.runs ?? 0),
         kills: Number(payload.lifetime.kills ?? 0),
@@ -189,11 +213,14 @@ export const useMetaStore = defineStore('meta', () => {
     unlockedNodeIdSet,
     availableNodeIdSet,
     paragonLevel,
+    prestigeLevel,
+    isParagonComplete,
     nodeCostOf,
     totalSpentOnTree,
     canUnlockNode,
     unlockNode,
     resetTree,
+    prestige,
     resetAllProgress,
     exportSave,
     importSave,

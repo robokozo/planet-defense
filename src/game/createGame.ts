@@ -1,6 +1,6 @@
 import Phaser from 'phaser'
 
-import { ARENA } from '@/game/data/balance'
+import { ARENA, PRESTIGE } from '@/game/data/balance'
 import { GameScene } from '@/game/scenes/GameScene'
 import type { GameSceneData } from '@/game/types'
 
@@ -14,11 +14,14 @@ export function createPlanetGame({
   // a portrait container (mobile) gets a portrait arena; the scene lays its
   // battlefield out from the actual arena size, so both shapes work
   const isPortrait = parent.clientHeight > parent.clientWidth
+  // every prestige grows the logical arena; FIT scaling shows it all on the
+  // same screen, so the world reads as the camera pulling further back
+  const zoomOut = 1 + PRESTIGE.zoomOutPerLevel * (sceneData.prestigeLevel ?? 0)
   const game = new Phaser.Game({
     type: Phaser.AUTO,
     parent,
-    width: isPortrait === true ? ARENA.portraitWidth : ARENA.width,
-    height: isPortrait === true ? ARENA.portraitHeight : ARENA.height,
+    width: Math.round((isPortrait === true ? ARENA.portraitWidth : ARENA.width) * zoomOut),
+    height: Math.round((isPortrait === true ? ARENA.portraitHeight : ARENA.height) * zoomOut),
     backgroundColor: '#05060f',
     scale: {
       mode: Phaser.Scale.FIT,

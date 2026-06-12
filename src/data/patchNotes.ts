@@ -22,6 +22,25 @@ export interface PatchEntry {
 export const PATCH_NOTES: Array<PatchEntry> = [
   {
     date: '2026-06-12',
+    title: 'The Bigger Picture',
+    blurb: 'Complete the paragon board and see how wide the war really is.',
+    notes: [
+      {
+        kind: 'new',
+        text: 'Prestige: once every node on the paragon board is bought, the tree offers to pull the view back. Prestiging wipes your stardust and the board — but the camera zooms out permanently, revealing a wider front with one more gun emplacement. Up to ten guns can eventually hold the line.',
+      },
+      {
+        kind: 'new',
+        text: 'Prestige survives everything except a full progress wipe, travels with save codes, and shows on the home screen and tree header.',
+      },
+      {
+        kind: 'new',
+        text: 'Training range: a Prestige row simulates the zoomed-out battlefield for build testing.',
+      },
+    ],
+  },
+  {
+    date: '2026-06-12',
     title: 'Hungry Balloons',
     blurb: 'Community report: cloud cover made minefields feel sluggish.',
     notes: [

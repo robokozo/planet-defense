@@ -1,4 +1,4 @@
-import { AEGIS_BLOCK_INTERVAL_MS, BASE_RUN_STATS } from '@/game/data/balance'
+import { AEGIS_BLOCK_INTERVAL_MS, BASE_RUN_STATS, PRESTIGE } from '@/game/data/balance'
 import type { RunStats } from '@/game/types'
 
 export type SkillNodeKind = 'root' | 'minor' | 'notable' | 'keystone'
@@ -650,6 +650,23 @@ export function aggregateEffects({
     }
   }
   return totals
+}
+
+/** every prestige permanently staffs one more gun emplacement, up to the slot cap */
+export function applyPrestige({
+  stats,
+  prestigeLevel,
+}: {
+  stats: RunStats
+  prestigeLevel: number
+}): RunStats {
+  return {
+    ...stats,
+    cannonCount: Math.min(
+      PRESTIGE.maxCannons,
+      stats.cannonCount + PRESTIGE.bonusCannonsPerLevel * prestigeLevel,
+    ),
+  }
 }
 
 export function buildStartingStats({

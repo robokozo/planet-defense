@@ -76,13 +76,27 @@ function onImportSave(): void {
       <p class="mt-3 text-slate-400">The invasion has begun. Hold the line.</p>
     </header>
 
-    <section
-      class="flex items-center gap-3 rounded-full border border-amber-400/30 bg-amber-400/10 px-6 py-2"
-    >
-      <span class="text-2xl">✦</span>
-      <span class="text-xl font-bold text-amber-300">{{ Math.floor(metaStore.stardust) }}</span>
-      <span class="text-sm text-amber-200/70">stardust</span>
+    <section class="flex flex-wrap items-center justify-center gap-3">
+      <span
+        class="flex items-center gap-3 rounded-full border border-amber-400/30 bg-amber-400/10 px-6 py-2"
+      >
+        <span class="text-2xl">✦</span>
+        <span class="text-xl font-bold text-amber-300">{{ Math.floor(metaStore.stardust) }}</span>
+        <span class="text-sm text-amber-200/70">stardust</span>
+      </span>
+      <span
+        v-if="metaStore.prestigeLevel > 0"
+        class="flex items-center gap-2 rounded-full border border-sky-400/30 bg-sky-400/10 px-5 py-2"
+        title="Each prestige pulls the view back and staffs another gun emplacement"
+      >
+        <span class="text-xl font-bold text-sky-300">⟴ {{ metaStore.prestigeLevel }}</span>
+        <span class="text-sm text-sky-200/70">prestige</span>
+      </span>
     </section>
+
+    <p v-if="metaStore.isParagonComplete === true" class="-mt-6 text-sm font-semibold text-sky-300">
+      The paragon board is complete — prestige awaits in the Paragon Tree.
+    </p>
 
     <nav class="flex flex-col items-center gap-4">
       <RouterLink

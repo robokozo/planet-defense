@@ -257,7 +257,11 @@ interface BuildingUnit {
 const SPAWN_Y = -30
 const BARREL_LENGTH = 30
 /** deploy order for the primary cannon and the three Auxiliary Cannon upgrades, as fractions of arena width */
-const CANNON_X_FRACTIONS = [0.5, 0.734, 0.219, 0.922] as const
+// slot order matters: the first four match the pre-prestige layout, the rest
+// fill the gaps as prestige staffs the wider front (up to PRESTIGE.maxCannons)
+const CANNON_X_FRACTIONS = [
+  0.5, 0.734, 0.219, 0.922, 0.078, 0.609, 0.391, 0.828, 0.172, 0.297,
+] as const
 const BUILDING_X_FRACTIONS = [0.148, 0.281, 0.406, 0.625, 0.844] as const
 const BUILDING_HEIGHTS = [62, 96, 74, 108, 84] as const
 /** which building collapses first, second, … as integrity falls */

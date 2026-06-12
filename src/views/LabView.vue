@@ -12,7 +12,7 @@ import {
 import { gameEventBus } from '@/game/eventBus'
 import { soundEngine } from '@/game/sound'
 import type { SandboxLayout, SandboxStatsEntry } from '@/game/types'
-import { SKILL_NODES, buildStartingStats } from '@/skills/skillTree'
+import { SKILL_NODES, applyPrestige, buildStartingStats } from '@/skills/skillTree'
 
 type TreePreset = 'none' | 'keystones' | 'full'
 
@@ -37,6 +37,14 @@ const DUMMY_HP_OPTIONS: Array<number | null> = [null, 50, 250, 1000]
 /** 0.5× slow-mo for inspecting visuals, fast-forward for letting DPS converge */
 const SPEED_OPTIONS: Array<number> = [0.5, 1, 2, 5]
 const speedMultiplier = ref(1)
+/** simulate prestige zoom-out: wider arena, extra gun emplacements */
+const PRESTIGE_OPTIONS: Array<number> = [0, 3, 6, 9]
+const prestigeLevel = ref(0)
+
+function setPrestige({ level }: { level: number }): void {
+  prestigeLevel.value = level
+  scheduleRestart()
+}
 
 function setSpeed({ multiplier }: { multiplier: number }): void {
   speedMultiplier.value = multiplier
@@ -119,9 +127,13 @@ function startGame(): void {
   game = createPlanetGame({
     parent: gameContainer.value,
     sceneData: {
-      startingStats: buildSandboxStats(),
+      startingStats: applyPrestige({
+        stats: buildSandboxStats(),
+        prestigeLevel: prestigeLevel.value,
+      }),
       stardustMultiplier: 1,
       mode: 'sandbox',
+      prestigeLevel: prestigeLevel.value,
       initialCardStacks: { ...cardStacks.value },
       sandboxLayout: {
         formation: dummyFormation.value,
@@ -481,6 +493,26 @@ onUnmounted(() => {
             @click="setDummyHp({ hp: option })"
           >
             {{ option === null ? '∞' : option }}
+          </button>
+        </div>
+
+        <div class="flex items-center gap-1.5" data-testid="sim-prestige">
+          <p class="w-16 shrink-0 text-xs font-bold uppercase tracking-wider text-slate-500">
+            Prestige
+          </p>
+          <button
+            v-for="option in PRESTIGE_OPTIONS"
+            :key="option"
+            type="button"
+            class="flex-1 cursor-pointer rounded-lg px-2 py-1.5 text-xs font-semibold transition"
+            :class="
+              prestigeLevel === option
+                ? 'bg-lime-400 text-slate-950'
+                : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+            "
+            @click="setPrestige({ level: option })"
+          >
+            ⟴{{ option }}
           </button>
         </div>
 

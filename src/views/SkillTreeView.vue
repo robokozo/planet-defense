@@ -233,6 +233,18 @@ function requestReset(): void {
   selectedNodeId.value = null
 }
 
+const isConfirmingPrestige = ref(false)
+
+function requestPrestige(): void {
+  if (isConfirmingPrestige.value === false) {
+    isConfirmingPrestige.value = true
+    return
+  }
+  metaStore.prestige()
+  isConfirmingPrestige.value = false
+  selectedNodeId.value = null
+}
+
 function edgeOpacity({ fromId, toId }: { fromId: string; toId: string }): number {
   const isFromUnlocked = metaStore.unlockedNodeIdSet.has(fromId)
   const isToUnlocked = metaStore.unlockedNodeIdSet.has(toId)
@@ -281,6 +293,26 @@ function nodeOpacity({ node }: { node: SkillNode }): number {
         <h1 class="text-xl font-black tracking-wider text-fuchsia-300">PARAGON TREE</h1>
       </div>
       <div class="flex items-center gap-4">
+        <span
+          v-if="metaStore.prestigeLevel > 0"
+          class="flex items-center gap-2 rounded-full border border-sky-400/30 bg-sky-400/10 px-4 py-1.5 text-sm font-bold text-sky-300"
+          title="Each prestige pulls the view back and staffs another gun emplacement"
+        >
+          ⟴ Prestige {{ metaStore.prestigeLevel }}
+        </span>
+        <button
+          v-if="metaStore.isParagonComplete === true"
+          type="button"
+          class="cursor-pointer rounded-lg border border-sky-400/50 bg-sky-500/15 px-3 py-1.5 text-sm font-bold text-sky-300 transition hover:bg-sky-500/25"
+          @click="requestPrestige()"
+          @mouseleave="isConfirmingPrestige = false"
+        >
+          {{
+            isConfirmingPrestige === true
+              ? 'Confirm: reset everything, zoom out?'
+              : '⟴ Prestige — pull back the view'
+          }}
+        </button>
         <span
           class="flex items-center gap-2 rounded-full border border-fuchsia-400/30 bg-fuchsia-400/10 px-4 py-1.5 text-sm font-bold text-fuchsia-300"
           :title="`Every point bought raises node prices — currently ×${costMultiplier.toFixed(2)}`"

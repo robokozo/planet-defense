@@ -9,7 +9,7 @@ import { createPlanetGame } from '@/game/createGame'
 import { gameEventBus } from '@/game/eventBus'
 import { soundEngine } from '@/game/sound'
 import type { HudSnapshot, LevelUpOffer, RunResult } from '@/game/types'
-import { buildStartingStats, stardustMultiplierFrom } from '@/skills/skillTree'
+import { applyPrestige, buildStartingStats, stardustMultiplierFrom } from '@/skills/skillTree'
 import { useMetaStore } from '@/stores/metaStore'
 
 const metaStore = useMetaStore()
@@ -37,11 +37,16 @@ function startGame(): void {
     return
   }
   const unlockedNodeIds = metaStore.unlockedNodeIds
+  const prestigeLevel = metaStore.prestigeLevel
   game = createPlanetGame({
     parent: gameContainer.value,
     sceneData: {
-      startingStats: buildStartingStats({ unlockedNodeIds }),
+      startingStats: applyPrestige({
+        stats: buildStartingStats({ unlockedNodeIds }),
+        prestigeLevel,
+      }),
       stardustMultiplier: stardustMultiplierFrom({ unlockedNodeIds }),
+      prestigeLevel,
     },
   })
 }

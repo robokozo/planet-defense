@@ -8,6 +8,19 @@ export const ARENA = {
   portraitHeight: 1280,
 } as const
 
+/**
+ * Prestige: completing the paragon board lets you reset everything for a
+ * permanent zoom-out — the view pulls back to a wider front with one more
+ * gun emplacement per prestige.
+ */
+export const PRESTIGE = {
+  bonusCannonsPerLevel: 1,
+  /** hard cap — also the number of cannon slots the battlefield provides */
+  maxCannons: 10,
+  /** the logical arena grows by this fraction per prestige; FIT scaling shows it all */
+  zoomOutPerLevel: 0.09,
+} as const
+
 export const BATTERY = {
   radius: 26,
   shieldRadius: 44,

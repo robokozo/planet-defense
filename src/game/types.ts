@@ -151,6 +151,8 @@ export interface SandboxLayout {
 export interface GameSceneData {
   startingStats: RunStats
   stardustMultiplier: number
+  /** widens the arena (zoom-out) — the cannon bonus is already baked into startingStats */
+  prestigeLevel?: number
   /** 'sandbox' spawns invincible dummies, disables waves, and reports per-weapon dps */
   mode?: 'normal' | 'sandbox'
   /** sandbox only: pre-applied card stacks so visuals (drones, clouds…) match */
