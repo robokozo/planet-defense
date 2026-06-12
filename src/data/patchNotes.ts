@@ -49,6 +49,10 @@ export const PATCH_NOTES: Array<PatchEntry> = [
         kind: 'fix',
         text: 'The Mine Layer is now called Balloon Mines — it was always balloons.',
       },
+      {
+        kind: 'new',
+        text: 'Synergy glossary: tap ⛓ during a run (it pauses the fight) or on any level-up screen to browse every synergy, its parent cards, and the tiers required.',
+      },
     ],
   },
   {

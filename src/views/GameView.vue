@@ -5,6 +5,7 @@ import { onMounted, onUnmounted, ref } from 'vue'
 import GameHud from '@/components/GameHud.vue'
 import GameOverOverlay from '@/components/GameOverOverlay.vue'
 import LevelUpOverlay from '@/components/LevelUpOverlay.vue'
+import SynergyGlossary from '@/components/SynergyGlossary.vue'
 import { createPlanetGame } from '@/game/createGame'
 import { gameEventBus } from '@/game/eventBus'
 import { soundEngine } from '@/game/sound'
@@ -97,6 +98,28 @@ function togglePause(): void {
   gameEventBus.emit({ event: 'set-paused', payload: { isPaused: isPaused.value } })
 }
 
+// ── synergy glossary (pauses the run while reading) ───────────────────
+const isGlossaryOpen = ref(false)
+let didGlossaryPause = false
+
+function openGlossary(): void {
+  isGlossaryOpen.value = true
+  if (isPaused.value === false && levelUpOffer.value === null && runResult.value === null) {
+    didGlossaryPause = true
+    isPaused.value = true
+    gameEventBus.emit({ event: 'set-paused', payload: { isPaused: true } })
+  }
+}
+
+function closeGlossary(): void {
+  isGlossaryOpen.value = false
+  if (didGlossaryPause === true) {
+    didGlossaryPause = false
+    isPaused.value = false
+    gameEventBus.emit({ event: 'set-paused', payload: { isPaused: false } })
+  }
+}
+
 onMounted(() => {
   busUnsubscribes.push(
     gameEventBus.on({
@@ -159,6 +182,14 @@ onUnmounted(() => {
       <button
         type="button"
         class="cursor-pointer rounded-lg bg-slate-900/80 px-3 py-2 text-sm font-semibold text-slate-300 transition hover:bg-slate-800 sm:px-4"
+        aria-label="Synergy glossary"
+        @click="openGlossary()"
+      >
+        ⛓
+      </button>
+      <button
+        type="button"
+        class="cursor-pointer rounded-lg bg-slate-900/80 px-3 py-2 text-sm font-semibold text-slate-300 transition hover:bg-slate-800 sm:px-4"
         :aria-label="isMuted === true ? 'Unmute sound' : 'Mute sound'"
         @click="toggleMute()"
       >
@@ -188,5 +219,7 @@ onUnmounted(() => {
     />
 
     <GameOverOverlay v-if="runResult !== null" :result="runResult" @restart="() => restartRun()" />
+
+    <SynergyGlossary v-if="isGlossaryOpen === true" @close="closeGlossary()" />
   </main>
 </template>

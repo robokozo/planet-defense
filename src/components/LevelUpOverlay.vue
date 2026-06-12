@@ -1,7 +1,12 @@
 <script setup lang="ts">
+import { ref } from 'vue'
+
+import SynergyGlossary from '@/components/SynergyGlossary.vue'
 import type { LevelUpOffer, UpgradeRarity } from '@/game/types'
 
 const { offer } = defineProps<{ offer: LevelUpOffer }>()
+
+const isGlossaryOpen = ref(false)
 
 const emit = defineEmits<{
   choose: [payload: { upgradeId: string }]
@@ -107,10 +112,19 @@ const RARITY_LABEL_CLASSES: Record<UpgradeRarity, string> = {
         >
           ↻ Reroll ({{ offer.rerollsLeft }} left this run)
         </button>
+        <button
+          type="button"
+          class="cursor-pointer rounded-lg border border-fuchsia-500/40 px-5 py-2 text-sm font-semibold text-fuchsia-300 transition hover:border-fuchsia-400 hover:bg-fuchsia-500/10"
+          @click="isGlossaryOpen = true"
+        >
+          ⛓ Synergies
+        </button>
         <p v-if="offer.banishesLeft > 0" class="text-xs text-slate-500">
           ✕ banishes a card for the run ({{ offer.banishesLeft }} left)
         </p>
       </div>
     </div>
+
+    <SynergyGlossary v-if="isGlossaryOpen === true" @close="isGlossaryOpen = false" />
   </div>
 </template>
