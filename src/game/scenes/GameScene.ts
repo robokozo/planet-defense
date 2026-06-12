@@ -125,6 +125,8 @@ interface SweepBeam {
   directionSign: 1 | -1
   damage: number
   hitEnemies: Set<EnemyUnit>
+  /** how far the beam reaches this frame — full range, or cut short by the invader blocking it */
+  currentLengthPx: number
   isDead: boolean
 }
 
@@ -696,7 +698,8 @@ export class GameScene extends Phaser.Scene {
     if (layout.formation === 'boss') {
       this.spawnDummy({
         x: this.arenaWidth / 2,
-        y: 300,
+        // same clamp as the real boss: keep the big dummy inside gun range
+        y: Math.max(300, this.cannonY - this.stats.range * 0.8),
         radius: 40,
         scale: 2.5,
         patrolAmplitude: layout.isMoving === true ? 150 : 0,
@@ -1067,7 +1070,7 @@ export class GameScene extends Phaser.Scene {
 
       // the mothership descends to its hover line, then drifts and bombards
       if (enemy.definition.kind === 'mothership') {
-        if (enemy.image.y < BOSS.hoverY) {
+        if (enemy.image.y < this.bossHoverY()) {
           enemy.directionX = 0
           enemy.directionY = 1
           enemy.image.y += speed * seconds
@@ -2962,11 +2965,13 @@ export class GameScene extends Phaser.Scene {
         sweep.isDead = true
         continue
       }
-      // ray test: everything the beam line passes over takes one hit per sweep
+      // ray test: the beam stops at the first invader it touches — no piercing
       const directionX = Math.cos(sweep.angleRad)
       const directionY = Math.sin(sweep.angleRad)
+      let blocker: EnemyUnit | null = null
+      let blockerAlong = Number.POSITIVE_INFINITY
       for (const enemy of this.enemies) {
-        if (enemy.isDead === true || sweep.hitEnemies.has(enemy) === true) {
+        if (enemy.isDead === true) {
           continue
         }
         const toEnemyX = enemy.image.x - sweep.originX
@@ -2976,10 +2981,15 @@ export class GameScene extends Phaser.Scene {
           continue
         }
         const perpendicular = Math.abs(toEnemyX * directionY - toEnemyY * directionX)
-        if (perpendicular <= enemy.radius + LANCE.beamHalfWidthPx) {
-          sweep.hitEnemies.add(enemy)
-          this.damageEnemy({ enemy, amount: sweep.damage, source: 'lance' })
+        if (perpendicular <= enemy.radius + LANCE.beamHalfWidthPx && along < blockerAlong) {
+          blocker = enemy
+          blockerAlong = along
         }
+      }
+      sweep.currentLengthPx = blocker === null ? this.stats.range : blockerAlong
+      if (blocker !== null && sweep.hitEnemies.has(blocker) === false) {
+        sweep.hitEnemies.add(blocker)
+        this.damageEnemy({ enemy: blocker, amount: sweep.damage, source: 'lance' })
       }
     }
     this.sweeps = this.sweeps.filter((sweep) => sweep.isDead === false)
@@ -3023,6 +3033,7 @@ export class GameScene extends Phaser.Scene {
       directionSign,
       damage: this.stats.damage * (LANCE.baseDamageMult + LANCE.damageMultPerLevel * (level - 1)),
       hitEnemies: new Set(),
+      currentLengthPx: this.stats.range,
       isDead: false,
     })
   }
@@ -3031,14 +3042,13 @@ export class GameScene extends Phaser.Scene {
   private drawSweepBeams(): void {
     this.sweepGraphics.clear()
     const level = Math.max(1, this.stats.lanceLevel)
-    // the drawn beam ends where its reach does — the cannon's targeting range
-    const beamLength = this.stats.range
     for (const sweep of this.sweeps) {
       if (sweep.isDead === true) {
         continue
       }
-      const endX = sweep.originX + Math.cos(sweep.angleRad) * beamLength
-      const endY = sweep.originY + Math.sin(sweep.angleRad) * beamLength
+      // the drawn beam ends where its reach does — the blocking invader, or targeting range
+      const endX = sweep.originX + Math.cos(sweep.angleRad) * sweep.currentLengthPx
+      const endY = sweep.originY + Math.sin(sweep.angleRad) * sweep.currentLengthPx
       // rail-gun-width beam, but yellow: soft glow plus a bright core
       this.sweepGraphics.lineStyle(7 + 3 * (level - 1), 0xfde047, 0.3)
       this.sweepGraphics.lineBetween(sweep.originX, sweep.originY, endX, endY)
@@ -3388,6 +3398,14 @@ export class GameScene extends Phaser.Scene {
 
   // ── boss motherships ───────────────────────────────────────────────
 
+  /**
+   * the mothership's hover altitude — at most 80% of the guns' reach above
+   * them, so tall portrait arenas pull the boss down into targeting range
+   */
+  private bossHoverY(): number {
+    return Math.max(BOSS.hoverY, this.cannonY - this.stats.range * 0.8)
+  }
+
   private updateBossSpawners({ delta }: { delta: number }): void {
     for (const enemy of this.enemies) {
       if (enemy.isDead === true) {
@@ -3406,7 +3424,7 @@ export class GameScene extends Phaser.Scene {
           this.spawnImpactFlash({ x: enemy.image.x, y: enemy.image.y + enemy.radius, radius: 18 })
         }
         // the boss never crashes into the city — it bombards from its hover
-        if (enemy.image.y >= BOSS.hoverY) {
+        if (enemy.image.y >= this.bossHoverY()) {
           enemy.attackAccumulatorMs += delta
           if (enemy.attackAccumulatorMs >= BOSS.boltIntervalMs) {
             enemy.attackAccumulatorMs = 0

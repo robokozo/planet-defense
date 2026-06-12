@@ -47,3 +47,9 @@
 
 - [x] code-split the Phaser chunk (build warns at 1.4 MB) — dynamic-import the game only on /game and /lab
 - [x] cap delta in the update loop so a backgrounded tab doesn't fast-forward a giant frame on return
+
+- [x] paragon board is not zoomable on mobile
+- [x] thermal lance is too good. can it not pierce?
+- [x] on mobile there are some tiny overlap issues (basically the timer appears under all the butotns. not a huge deal because the timer isnt that important)
+- [x] speed controls on the lab
+- [x] on mobile the boss is too high and unreachable. make it so they always need to be within the guns range

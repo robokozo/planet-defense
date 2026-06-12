@@ -34,6 +34,14 @@ const isMainGunEnabled = ref(true)
 /** null = invincible; finite dummies die and respawn (for kill-triggered effects) */
 const dummyHp = ref<number | null>(null)
 const DUMMY_HP_OPTIONS: Array<number | null> = [null, 50, 250, 1000]
+/** 0.5× slow-mo for inspecting visuals, fast-forward for letting DPS converge */
+const SPEED_OPTIONS: Array<number> = [0.5, 1, 2, 5]
+const speedMultiplier = ref(1)
+
+function setSpeed({ multiplier }: { multiplier: number }): void {
+  speedMultiplier.value = multiplier
+  gameEventBus.emit({ event: 'set-speed', payload: { multiplier } })
+}
 
 let game: Phaser.Game | null = null
 let restartTimer: ReturnType<typeof setTimeout> | null = null
@@ -124,6 +132,13 @@ function startGame(): void {
       },
     },
   })
+  // a fresh scene boots at 1× — re-apply the chosen speed once it is listening
+  // (same readiness window the benchmark relies on)
+  if (speedMultiplier.value !== 1) {
+    setTimeout(() => {
+      gameEventBus.emit({ event: 'set-speed', payload: { multiplier: speedMultiplier.value } })
+    }, 600)
+  }
 }
 
 function setFormation({ formation }: { formation: SandboxLayout['formation'] }): void {
@@ -466,6 +481,26 @@ onUnmounted(() => {
             @click="setDummyHp({ hp: option })"
           >
             {{ option === null ? '∞' : option }}
+          </button>
+        </div>
+
+        <div class="flex items-center gap-1.5" data-testid="sim-speed">
+          <p class="w-16 shrink-0 text-xs font-bold uppercase tracking-wider text-slate-500">
+            Speed
+          </p>
+          <button
+            v-for="option in SPEED_OPTIONS"
+            :key="option"
+            type="button"
+            class="flex-1 cursor-pointer rounded-lg px-2 py-1.5 text-xs font-semibold transition"
+            :class="
+              speedMultiplier === option
+                ? 'bg-lime-400 text-slate-950'
+                : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+            "
+            @click="setSpeed({ multiplier: option })"
+          >
+            ×{{ option }}
           </button>
         </div>
 

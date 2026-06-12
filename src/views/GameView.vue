@@ -134,7 +134,7 @@ onUnmounted(() => {
     <div class="absolute right-4 top-4 z-10 flex gap-2">
       <button
         type="button"
-        class="cursor-pointer rounded-lg px-4 py-2 text-sm font-bold transition"
+        class="cursor-pointer rounded-lg px-3 py-2 text-sm font-bold transition sm:px-4"
         :class="
           speedMultiplier === 1
             ? 'bg-slate-900/80 text-slate-300 hover:bg-slate-800'
@@ -146,14 +146,14 @@ onUnmounted(() => {
       </button>
       <button
         type="button"
-        class="cursor-pointer rounded-lg bg-slate-900/80 px-4 py-2 text-sm font-semibold text-slate-300 transition hover:bg-slate-800"
+        class="cursor-pointer rounded-lg bg-slate-900/80 px-3 py-2 text-sm font-semibold text-slate-300 transition hover:bg-slate-800 sm:px-4"
         @click="togglePause()"
       >
         {{ isPaused === true ? 'Resume' : 'Pause' }}
       </button>
       <button
         type="button"
-        class="cursor-pointer rounded-lg bg-slate-900/80 px-4 py-2 text-sm font-semibold text-slate-300 transition hover:bg-slate-800"
+        class="cursor-pointer rounded-lg bg-slate-900/80 px-3 py-2 text-sm font-semibold text-slate-300 transition hover:bg-slate-800 sm:px-4"
         :aria-label="isMuted === true ? 'Unmute sound' : 'Mute sound'"
         @click="toggleMute()"
       >
@@ -161,7 +161,7 @@ onUnmounted(() => {
       </button>
       <RouterLink
         to="/"
-        class="rounded-lg bg-slate-900/80 px-4 py-2 text-sm font-semibold text-slate-300 transition hover:bg-slate-800"
+        class="rounded-lg bg-slate-900/80 px-3 py-2 text-sm font-semibold text-slate-300 transition hover:bg-slate-800 sm:px-4"
       >
         Abandon
       </RouterLink>

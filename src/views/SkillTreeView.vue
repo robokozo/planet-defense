@@ -25,9 +25,8 @@ const selectedNodeId = ref<string | null>(null)
 const isConfirmingReset = ref(false)
 
 const svgElement = ref<SVGSVGElement | null>(null)
-let activePointerId: number | null = null
-let lastPointerX = 0
-let lastPointerY = 0
+const activePointers = new Map<number, { x: number; y: number }>()
+let lastPinchDistance = 0
 let isDraggingCamera = false
 
 const hoveredNodeId = ref<string | null>(null)
@@ -125,18 +124,52 @@ const unlockBlockReason = computed<string | null>(() => {
 const DRAG_THRESHOLD_PX = 5
 
 function onPointerDown(event: PointerEvent): void {
-  activePointerId = event.pointerId
-  lastPointerX = event.clientX
-  lastPointerY = event.clientY
-  isDraggingCamera = false
+  activePointers.set(event.pointerId, { x: event.clientX, y: event.clientY })
+  if (activePointers.size === 2) {
+    const [first, second] = [...activePointers.values()]
+    lastPinchDistance = Math.hypot(first.x - second.x, first.y - second.y)
+    // a second finger means pinch — never a node tap
+    isDraggingCamera = true
+    svgElement.value?.setPointerCapture(event.pointerId)
+  }
+  if (activePointers.size === 1) {
+    isDraggingCamera = false
+  }
 }
 
 function onPointerMove(event: PointerEvent): void {
-  if (activePointerId !== event.pointerId || svgElement.value === null) {
+  const pointer = activePointers.get(event.pointerId)
+  if (pointer === undefined || svgElement.value === null) {
     return
   }
-  const movedX = event.clientX - lastPointerX
-  const movedY = event.clientY - lastPointerY
+  const clientWidth = svgElement.value.clientWidth
+  if (clientWidth <= 0) {
+    return
+  }
+  const unitsPerPixel = VIEW_BASE_WIDTH / zoom.value / clientWidth
+
+  if (activePointers.size >= 2) {
+    // pinch: zoom by the change in finger spread, pan by the midpoint drift
+    const [first, second] = [...activePointers.values()]
+    const oldMidX = (first.x + second.x) / 2
+    const oldMidY = (first.y + second.y) / 2
+    pointer.x = event.clientX
+    pointer.y = event.clientY
+    const distance = Math.hypot(first.x - second.x, first.y - second.y)
+    if (lastPinchDistance > 0 && distance > 0) {
+      zoom.value = Math.max(
+        ZOOM_MIN,
+        Math.min(ZOOM_MAX, zoom.value * (distance / lastPinchDistance)),
+      )
+    }
+    lastPinchDistance = distance
+    cameraX.value -= ((first.x + second.x) / 2 - oldMidX) * unitsPerPixel
+    cameraY.value -= ((first.y + second.y) / 2 - oldMidY) * unitsPerPixel
+    return
+  }
+
+  const movedX = event.clientX - pointer.x
+  const movedY = event.clientY - pointer.y
   if (isDraggingCamera === false) {
     if (Math.hypot(movedX, movedY) < DRAG_THRESHOLD_PX) {
       return
@@ -145,27 +178,26 @@ function onPointerMove(event: PointerEvent): void {
     isDraggingCamera = true
     svgElement.value.setPointerCapture(event.pointerId)
   }
-  const clientWidth = svgElement.value.clientWidth
-  if (clientWidth <= 0) {
-    return
-  }
-  const unitsPerPixel = VIEW_BASE_WIDTH / zoom.value / clientWidth
   cameraX.value -= movedX * unitsPerPixel
   cameraY.value -= movedY * unitsPerPixel
-  lastPointerX = event.clientX
-  lastPointerY = event.clientY
+  pointer.x = event.clientX
+  pointer.y = event.clientY
 }
 
 function onPointerUp(event: PointerEvent): void {
-  if (activePointerId === event.pointerId) {
-    activePointerId = null
+  activePointers.delete(event.pointerId)
+  lastPinchDistance = 0
+  if (activePointers.size === 0) {
     isDraggingCamera = false
   }
 }
 
-function onWheel(event: WheelEvent): void {
-  const factor = event.deltaY < 0 ? ZOOM_STEP : 1 / ZOOM_STEP
+function zoomBy({ factor }: { factor: number }): void {
   zoom.value = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, zoom.value * factor))
+}
+
+function onWheel(event: WheelEvent): void {
+  zoomBy({ factor: event.deltaY < 0 ? ZOOM_STEP : 1 / ZOOM_STEP })
 }
 
 function selectNode({ nodeId }: { nodeId: string }): void {
@@ -386,9 +418,29 @@ function nodeOpacity({ node }: { node: SkillNode }): number {
         <p v-else class="text-center text-sm font-semibold text-emerald-400">Unlocked ✓</p>
       </aside>
 
-      <p class="pointer-events-none absolute bottom-4 left-4 text-xs text-slate-500">
-        Drag to pan · scroll to zoom · click a node for details
-      </p>
+      <div class="absolute bottom-4 left-4 flex items-center gap-3">
+        <div class="flex overflow-hidden rounded-lg border border-slate-700 bg-slate-900/90">
+          <button
+            type="button"
+            class="cursor-pointer px-3.5 py-2 text-lg font-bold leading-none text-slate-300 transition hover:bg-slate-800"
+            aria-label="Zoom out"
+            @click="zoomBy({ factor: 1 / ZOOM_STEP })"
+          >
+            −
+          </button>
+          <button
+            type="button"
+            class="cursor-pointer border-l border-slate-700 px-3.5 py-2 text-lg font-bold leading-none text-slate-300 transition hover:bg-slate-800"
+            aria-label="Zoom in"
+            @click="zoomBy({ factor: ZOOM_STEP })"
+          >
+            +
+          </button>
+        </div>
+        <p class="pointer-events-none text-xs text-slate-500">
+          Drag to pan · scroll or pinch to zoom · tap a node for details
+        </p>
+      </div>
     </div>
   </main>
 </template>

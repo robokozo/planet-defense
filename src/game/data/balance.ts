@@ -270,7 +270,7 @@ export const BOSS = {
   addSpawnIntervalMs: 4_000,
   xpGems: 6,
   xpPerGem: 35,
-  /** the mothership descends to this altitude, then holds and bombards */
+  /** minimum hover altitude — the scene lowers the hover line on tall portrait arenas so the guns can always reach the boss */
   hoverY: 170,
   driftSpeedPxPerSec: 30,
   /** plasma bolts dropped at the city while hovering */

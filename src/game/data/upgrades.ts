@@ -56,7 +56,7 @@ export const UPGRADE_DEFINITIONS: Array<UpgradeDefinition> = [
     id: 'lance',
     name: 'Thermal Lance',
     description:
-      'An orbital beam sweeps across a stretch of sky, searing everything it passes (stacks: wider sweep, stronger, faster)',
+      'An orbital beam sweeps across a stretch of sky, searing the first invader in its path (stacks: wider sweep, stronger, faster)',
     rarity: 'epic',
     category: 'weapon',
     maxStacks: BASE_MAX_STACKS,

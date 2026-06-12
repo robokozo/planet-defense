@@ -29,7 +29,10 @@ const elapsedLabel = computed(() => {
 
 <template>
   <div class="pointer-events-none absolute inset-x-0 top-0 flex flex-col gap-2 p-4">
-    <div class="flex items-center justify-between text-sm font-semibold">
+    <!-- stacked top-left on phones so the chips stay clear of the buttons in the top-right -->
+    <div
+      class="flex flex-col items-start gap-1.5 text-sm font-semibold sm:flex-row sm:items-center sm:justify-between sm:gap-0"
+    >
       <span class="rounded bg-slate-900/80 px-3 py-1 text-sky-300">Wave {{ hud.wave }}</span>
       <span class="rounded bg-slate-900/80 px-3 py-1 text-slate-300">{{ elapsedLabel }}</span>
       <span class="rounded bg-slate-900/80 px-3 py-1 text-red-300">{{ hud.kills }} kills</span>
