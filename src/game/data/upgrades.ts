@@ -36,7 +36,7 @@ export const UPGRADE_DEFINITIONS: Array<UpgradeDefinition> = [
     id: 'bfg',
     name: 'BFG',
     description:
-      'Bolts a BFG onto every cannon: a very long cooldown blast that devastates every invader on screen (stacks: stronger, faster)',
+      'Bolts the BFG onto the main cannon: a very long cooldown blast that devastates every invader on screen (stacks: stronger, faster)',
     rarity: 'legendary',
     category: 'weapon',
     maxStacks: BASE_MAX_STACKS,

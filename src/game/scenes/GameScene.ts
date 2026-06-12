@@ -359,6 +359,7 @@ export class GameScene extends Phaser.Scene {
   private waveAccumulatorMs = 0
   private regenAccumulatorMs = 0
   private airstrikeAccumulatorMs = 0
+  private bfgAccumulatorMs = 0
   private orbitalAccumulatorMs = 0
   private stormAccumulatorMs = 0
   private aegisAccumulatorMs = 0
@@ -675,6 +676,7 @@ export class GameScene extends Phaser.Scene {
     this.elapsedMs = 0
     this.damageBySource = new Map()
     this.airstrikeAccumulatorMs = 0
+    this.bfgAccumulatorMs = 0
     this.orbitalAccumulatorMs = 0
     this.stormAccumulatorMs = 0
     this.aegisAccumulatorMs = 0
@@ -818,6 +820,7 @@ export class GameScene extends Phaser.Scene {
     this.moveStasisMissiles({ delta })
     this.moveRockets({ delta })
     this.updateAirstrike({ delta })
+    this.updateBfg({ delta })
     this.updateLanceSweeps({ delta })
     this.updateMines({ delta })
     this.updateOrbitalLaser({ delta })
@@ -2192,9 +2195,6 @@ export class GameScene extends Phaser.Scene {
     if (this.stats.railgunLevel > 0) {
       weaponIds.push('railgun')
     }
-    if (this.stats.bfgLevel > 0) {
-      weaponIds.push('bfg')
-    }
     if (this.stats.lanceLevel > 0) {
       weaponIds.push('lance')
     }
@@ -2342,9 +2342,6 @@ export class GameScene extends Phaser.Scene {
     }
     if (weaponId === 'railgun') {
       return this.fireRailgun({ cannon })
-    }
-    if (weaponId === 'bfg') {
-      return this.fireBfg({ cannon })
     }
     if (weaponId === 'lance') {
       return this.fireLance({ cannon })
@@ -2858,16 +2855,29 @@ export class GameScene extends Phaser.Scene {
 
   // ── bfg ────────────────────────────────────────────────────────────
 
-  /** each gun charges and dumps its own screen-wide discharge */
-  private fireBfg({ cannon }: { cannon: CannonUnit }): boolean {
+  /** battlefield-wide discharge, like the orbital cannon — one charge no matter how many guns */
+  private updateBfg({ delta }: { delta: number }): void {
+    if (this.stats.bfgLevel <= 0) {
+      return
+    }
+    this.bfgAccumulatorMs += delta
+    const interval = this.weaponIntervalMs({ weaponId: 'bfg' })
+    if (this.bfgAccumulatorMs < interval) {
+      return
+    }
     const hasEnemies = this.enemies.some((enemy) => enemy.isDead === false)
     if (hasEnemies === false) {
-      return false
+      this.bfgAccumulatorMs = interval
+      return
     }
+    this.bfgAccumulatorMs = 0
     soundEngine.play({ name: 'bfg' })
 
     const level = this.stats.bfgLevel
-    const orb = this.add.circle(cannon.x, cannon.y - 24, 6, 0x4ade80, 0.95).setDepth(DEPTHS.effects)
+    const mainCannon = this.cannons[0]
+    const orb = this.add
+      .circle(mainCannon.x, mainCannon.y - 24, 6, 0x4ade80, 0.95)
+      .setDepth(DEPTHS.effects)
     this.tweens.add({
       targets: orb,
       radius: 30 + 10 * (level - 1),
@@ -2908,14 +2918,15 @@ export class GameScene extends Phaser.Scene {
       this.damageEnemy({ enemy, amount: bfgDamage, source: 'bfg' })
     }
 
-    // capacitor dump synergy: the discharge sets off a boosted nova on the firing cannon
+    // capacitor dump synergy: the discharge sets off a boosted nova on every cannon
     if (this.stats.capdumpLevel > 0) {
       const novaMultiplier =
         SYNERGIES.capdump.novaDamageMultBase +
         SYNERGIES.capdump.novaDamageMultPerLevel * (this.stats.capdumpLevel - 1)
-      this.fireNova({ cannon, damageMultiplier: novaMultiplier })
+      for (const cannon of this.cannons) {
+        this.fireNova({ cannon, damageMultiplier: novaMultiplier })
+      }
     }
-    return true
   }
 
   // ── thermal lance ──────────────────────────────────────────────────
@@ -3639,6 +3650,13 @@ export class GameScene extends Phaser.Scene {
             weaponId: 'airstrike',
             fraction:
               this.airstrikeAccumulatorMs / this.weaponIntervalMs({ weaponId: 'airstrike' }),
+          })
+        }
+        if (this.stats.bfgLevel > 0) {
+          rows.push({
+            key: 'bfg',
+            weaponId: 'bfg',
+            fraction: this.bfgAccumulatorMs / this.weaponIntervalMs({ weaponId: 'bfg' }),
           })
         }
         if (this.stats.orbitalLaserLevel > 0) {
