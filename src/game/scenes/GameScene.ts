@@ -196,9 +196,17 @@ interface BulletUnit {
   pierceLeft: number
   traveledPx: number
   maxTravelPx: number
-  /** proximity-fused: detonates into fragments when close to a invader */
-  isFlakShell: boolean
   hitEnemies: Set<EnemyUnit>
+  isDead: boolean
+}
+
+/** an artillery shell lobbed on a parabolic arc, fused for the predicted intercept */
+interface FlakShellUnit {
+  image: Phaser.GameObjects.Image
+  velocityX: number
+  velocityY: number
+  damage: number
+  fuseRemainingMs: number
   isDead: boolean
 }
 
@@ -367,6 +375,7 @@ export class GameScene extends Phaser.Scene {
 
   private enemies: Array<EnemyUnit> = []
   private bullets: Array<BulletUnit> = []
+  private flakShells: Array<FlakShellUnit> = []
   private rockets: Array<RocketUnit> = []
   private cannons: Array<CannonUnit> = []
   private buildings: Array<BuildingUnit> = []
@@ -660,6 +669,10 @@ export class GameScene extends Phaser.Scene {
       shell.image.destroy()
     }
     this.mineShells = []
+    for (const shell of this.flakShells) {
+      shell.image.destroy()
+    }
+    this.flakShells = []
     for (const bolt of this.bossBolts) {
       bolt.image.destroy()
     }
@@ -859,7 +872,7 @@ export class GameScene extends Phaser.Scene {
     this.updateIonTrails({ delta })
     this.updateBossSpawners({ delta })
     this.updateAegis({ delta })
-    this.checkFlakFuses()
+    this.updateFlakShells({ delta })
     this.collideBulletsWithEnemies()
     this.collideEnemiesWithGround()
     this.applyRegen({ delta })
@@ -1214,12 +1227,7 @@ export class GameScene extends Phaser.Scene {
         bullet.image.y < -BULLET_CULL_MARGIN ||
         bullet.image.y > this.groundY
       if (bullet.traveledPx >= bullet.maxTravelPx || isOutOfBounds === true) {
-        if (bullet.isFlakShell === true) {
-          // the timed fuse: burst at end of flight instead of fizzling
-          this.detonateFlakShell({ bullet, triggerEnemy: null })
-        } else {
-          bullet.isDead = true
-        }
+        bullet.isDead = true
       }
     }
   }
@@ -1375,7 +1383,6 @@ export class GameScene extends Phaser.Scene {
         pierceLeft: this.stats.pierce,
         traveledPx: 0,
         maxTravelPx: this.stats.range,
-        isFlakShell: false,
         hitEnemies: new Set(),
         isDead: false,
       })
@@ -1399,13 +1406,21 @@ export class GameScene extends Phaser.Scene {
     const muzzleY = cannon.y - 6
     const shellSpeed = this.stats.projectileSpeed * FLAK.shellSpeedFactor
     for (const target of targets) {
-      const interceptPoint = this.computeInterceptPoint({
-        originX: cannon.x,
-        originY: muzzleY,
-        target,
-        projectileSpeed: shellSpeed,
-      }) ?? { x: target.image.x, y: target.image.y }
-      const angle = Math.atan2(interceptPoint.y - muzzleY, interceptPoint.x - cannon.x)
+      // lob the shell on a parabola fused to burst where the target will be
+      const targetSpeed = this.effectiveEnemySpeed({ enemy: target })
+      const distancePx = Math.hypot(target.image.x - cannon.x, target.image.y - muzzleY)
+      const flightSeconds = Phaser.Math.Clamp(
+        distancePx / shellSpeed,
+        FLAK.minFlightSeconds,
+        FLAK.maxFlightSeconds,
+      )
+      const burstX = target.image.x + target.directionX * targetSpeed * flightSeconds
+      const burstY = target.image.y + target.directionY * targetSpeed * flightSeconds
+      const velocityX = (burstX - cannon.x) / flightSeconds
+      // solve the parabola so the shell crosses the burst point exactly at fuse time
+      const velocityY =
+        (burstY - muzzleY) / flightSeconds - 0.5 * FLAK.shellGravityPxPerSec2 * flightSeconds
+      const angle = Math.atan2(velocityY, velocityX)
       cannon.barrelImage.setRotation(angle)
       const image = this.add
         .image(
@@ -1414,31 +1429,54 @@ export class GameScene extends Phaser.Scene {
           'flak-shell',
         )
         .setScale(1 + 0.1 * (this.stats.flakLevel - 1))
+        .setRotation(angle)
         .setDepth(DEPTHS.bullets)
 
-      // timed fuse: if the proximity trigger never fires, the shell bursts
-      // right where the target was predicted to be
-      const fuseTravelPx = Math.min(
-        this.stats.range,
-        Math.hypot(interceptPoint.x - cannon.x, interceptPoint.y - muzzleY) + FLAK.fuseOvershootPx,
-      )
-
-      this.bullets.push({
+      this.flakShells.push({
         image,
-        source: 'flak',
-        velocityX: Math.cos(angle) * shellSpeed,
-        velocityY: Math.sin(angle) * shellSpeed,
+        velocityX,
+        velocityY,
         damage: this.stats.damage,
-        isCrit: false,
-        pierceLeft: 0,
-        traveledPx: 0,
-        maxTravelPx: fuseTravelPx,
-        isFlakShell: true,
-        hitEnemies: new Set(),
+        fuseRemainingMs: flightSeconds * 1_000,
         isDead: false,
       })
     }
     return true
+  }
+
+  /** shells arc under gravity; a proximity fuse or the flight timer bursts them */
+  private updateFlakShells({ delta }: { delta: number }): void {
+    const seconds = delta / 1_000
+    for (const shell of this.flakShells) {
+      if (shell.isDead === true) {
+        continue
+      }
+      shell.image.x += shell.velocityX * seconds
+      shell.image.y += shell.velocityY * seconds
+      shell.velocityY += FLAK.shellGravityPxPerSec2 * seconds
+      shell.image.setRotation(Math.atan2(shell.velocityY, shell.velocityX))
+      shell.fuseRemainingMs -= delta
+
+      for (const enemy of this.enemies) {
+        if (enemy.isDead === true) {
+          continue
+        }
+        const fuseRange = enemy.radius + FLAK.fuseDistancePx
+        const distanceSq =
+          (enemy.image.x - shell.image.x) ** 2 + (enemy.image.y - shell.image.y) ** 2
+        if (distanceSq <= fuseRange ** 2) {
+          this.detonateFlakShell({ shell, triggerEnemy: enemy })
+          break
+        }
+      }
+      if (
+        shell.isDead === false &&
+        (shell.fuseRemainingMs <= 0 || shell.image.y >= this.groundY - 8)
+      ) {
+        this.detonateFlakShell({ shell, triggerEnemy: null })
+      }
+    }
+    this.flakShells = this.flakShells.filter((shell) => shell.isDead === false)
   }
 
   // ── devourer swarm ─────────────────────────────────────────────────
@@ -1957,64 +1995,28 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
-  private checkFlakFuses(): void {
-    if (this.stats.flakLevel <= 0) {
-      return
-    }
-    for (const bullet of this.bullets) {
-      if (bullet.isDead === true || bullet.isFlakShell === false) {
-        continue
-      }
-      for (const enemy of this.enemies) {
-        if (enemy.isDead === true) {
-          continue
-        }
-        const fuseRange = enemy.radius + FLAK.fuseDistancePx
-        const distanceSq =
-          (enemy.image.x - bullet.image.x) ** 2 + (enemy.image.y - bullet.image.y) ** 2
-        if (distanceSq <= fuseRange ** 2) {
-          this.detonateFlakShell({ bullet, triggerEnemy: enemy })
-          break
-        }
-      }
-    }
-  }
-
   private detonateFlakShell({
-    bullet,
+    shell,
     triggerEnemy,
   }: {
-    bullet: BulletUnit
+    shell: FlakShellUnit
     triggerEnemy: EnemyUnit | null
   }): void {
-    bullet.isDead = true
+    shell.isDead = true
+    const burstX = shell.image.x
+    const burstY = shell.image.y
+    shell.image.destroy()
     soundEngine.play({ name: 'flak' })
-    const burstX = bullet.image.x
-    const burstY = bullet.image.y
+    this.spawnFlakSmoke({ x: burstX, y: burstY })
 
     // the shell itself wounds whatever tripped the fuse; fragments are the bonus
     if (triggerEnemy !== null) {
-      this.damageEnemy({ enemy: triggerEnemy, amount: bullet.damage, source: 'flak' })
+      this.damageEnemy({ enemy: triggerEnemy, amount: shell.damage, source: 'flak' })
     }
-
-    const flash = this.add
-      .circle(burstX, burstY, 8)
-      .setStrokeStyle(2 + 0.6 * (this.stats.flakLevel - 1), 0xfdba74, 0.9)
-      .setDepth(DEPTHS.effects)
-    this.tweens.add({
-      targets: flash,
-      radius: 26 + 5 * (this.stats.flakLevel - 1),
-      alpha: 0,
-      duration: 180,
-      ease: 'Cubic.easeOut',
-      onComplete: () => {
-        flash.destroy()
-      },
-    })
 
     const fragmentCount = FLAK.baseFragments + FLAK.fragmentsPerLevel * (this.stats.flakLevel - 1)
     const fragmentDamage =
-      (bullet.damage *
+      (shell.damage *
         (FLAK.baseDamagePercent + FLAK.damagePercentPerLevel * (this.stats.flakLevel - 1))) /
       100
     const baseFragmentSpeed = this.stats.projectileSpeed * FLAK.fragmentSpeedFactor
@@ -2024,7 +2026,7 @@ export class GameScene extends Phaser.Scene {
     const aimedAngle =
       triggerEnemy !== null
         ? Math.atan2(triggerEnemy.image.y - burstY, triggerEnemy.image.x - burstX)
-        : Math.atan2(bullet.velocityY, bullet.velocityX)
+        : Math.atan2(shell.velocityY, shell.velocityX)
     const ringSpacing = (Math.PI * 2) / fragmentCount
 
     for (let index = 0; index < fragmentCount; index += 1) {
@@ -2044,9 +2046,61 @@ export class GameScene extends Phaser.Scene {
         pierceLeft: 0,
         traveledPx: 0,
         maxTravelPx: FLAK.fragmentTravelPx * travelJitter,
-        isFlakShell: false,
         hitEnemies: new Set(),
         isDead: false,
+      })
+    }
+  }
+
+  /** the movie burst: a killing flash inside a rolling ball of black smoke that lingers */
+  private spawnFlakSmoke({ x, y }: { x: number; y: number }): void {
+    const level = Math.max(1, this.stats.flakLevel)
+    const flash = this.add.circle(x, y, 5, 0xfff7ed, 1).setDepth(DEPTHS.effects)
+    this.tweens.add({
+      targets: flash,
+      radius: 15 + 2 * (level - 1),
+      alpha: 0,
+      duration: 150,
+      ease: 'Cubic.easeOut',
+      onComplete: () => {
+        flash.destroy()
+      },
+    })
+    const core = this.add.circle(x, y, 8, 0xfb923c, 0.9).setDepth(DEPTHS.effects)
+    this.tweens.add({
+      targets: core,
+      radius: 18 + 2 * (level - 1),
+      alpha: 0,
+      duration: 260,
+      ease: 'Cubic.easeOut',
+      onComplete: () => {
+        core.destroy()
+      },
+    })
+    // the smoke sits under the units layer so invaders fly through the wall
+    const smokeColors = [0x0f172a, 0x1e293b, 0x334155]
+    const puffCount = 5 + Math.floor(Math.random() * 3)
+    for (let index = 0; index < puffCount; index += 1) {
+      const puff = this.add
+        .circle(
+          x + (Math.random() * 2 - 1) * 14,
+          y + (Math.random() * 2 - 1) * 12,
+          7 + Math.random() * 7,
+          smokeColors[Math.floor(Math.random() * smokeColors.length)],
+          0.85,
+        )
+        .setDepth(DEPTHS.units - 0.1)
+      this.tweens.add({
+        targets: puff,
+        radius: 20 + Math.random() * 16 + 2 * (level - 1),
+        x: puff.x + (Math.random() * 2 - 1) * 16,
+        y: puff.y - 6 - Math.random() * 12,
+        alpha: 0,
+        duration: 1_800 + Math.random() * 1_600,
+        ease: 'Sine.easeOut',
+        onComplete: () => {
+          puff.destroy()
+        },
       })
     }
   }
@@ -4262,7 +4316,6 @@ export class GameScene extends Phaser.Scene {
         pierceLeft: 0,
         traveledPx: 0,
         maxTravelPx: travelPx,
-        isFlakShell: false,
         hitEnemies: new Set(),
         isDead: false,
       })

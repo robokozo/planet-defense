@@ -22,6 +22,21 @@ export interface PatchEntry {
 export const PATCH_NOTES: Array<PatchEntry> = [
   {
     date: '2026-06-12',
+    title: 'Eighty-Eight',
+    blurb: 'The flak gun finally looks like flak.',
+    notes: [
+      {
+        kind: 'new',
+        text: 'Flak shells are now true artillery: lobbed on a parabolic arc with a fuse timed for where the target will be (plus the proximity trigger en route). Bursts erupt as rolling balls of black smoke with a white-hot flash at the core — sustained fire builds a drifting wall of it.',
+      },
+      {
+        kind: 'fix',
+        text: 'Your chosen game speed (×2, ×5) now sticks between rounds and reloads instead of resetting to ×1 every run.',
+      },
+    ],
+  },
+  {
+    date: '2026-06-12',
     title: 'Field Notes',
     blurb: 'The synergy glossary learns what you are carrying.',
     notes: [

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useLocalStorage } from '@vueuse/core'
 import type Phaser from 'phaser'
 import { onMounted, onUnmounted, ref } from 'vue'
 
@@ -20,7 +21,8 @@ const hud = ref<HudSnapshot | null>(null)
 const levelUpOffer = ref<LevelUpOffer | null>(null)
 const runResult = ref<RunResult | null>(null)
 const isPaused = ref(false)
-const speedMultiplier = ref(1)
+/** survives rounds and reloads — regulars shouldn't re-click ×5 every run */
+const speedMultiplier = useLocalStorage<number>('pd-sim-speed', 1)
 const isMuted = ref(soundEngine.muted())
 
 function toggleMute(): void {
@@ -50,6 +52,12 @@ function startGame(): void {
       prestigeLevel,
     },
   })
+  // a fresh scene boots at ×1 — re-apply the persisted speed once it is listening
+  if (speedMultiplier.value !== 1) {
+    setTimeout(() => {
+      gameEventBus.emit({ event: 'set-speed', payload: { multiplier: speedMultiplier.value } })
+    }, 600)
+  }
 }
 
 function destroyGame(): void {
@@ -65,7 +73,6 @@ function restartRun(): void {
   levelUpOffer.value = null
   runResult.value = null
   isPaused.value = false
-  speedMultiplier.value = 1
   startGame()
 }
 

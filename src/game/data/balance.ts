@@ -565,8 +565,12 @@ export const FLAK = {
   damagePercentPerLevel: 5,
   fragmentTravelPx: 150,
   fragmentSpeedFactor: 0.75,
-  /** shell flight speed relative to bullet speed */
+  /** shell flight speed relative to bullet speed (sets the lob's flight time) */
   shellSpeedFactor: 0.85,
+  /** gravity on the lobbed shell — the arc that makes it read as artillery */
+  shellGravityPxPerSec2: 620,
+  minFlightSeconds: 0.45,
+  maxFlightSeconds: 1.4,
   /** the timed fuse bursts this far past the predicted intercept point */
   fuseOvershootPx: 30,
 } as const
