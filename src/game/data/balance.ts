@@ -107,6 +107,20 @@ export const BASE_RUN_STATS: RunStats = {
   napalmLevel: 0,
   wildfireLevel: 0,
   thermiteLevel: 0,
+  thermalShockLevel: 0,
+  dischargeLevel: 0,
+  empLevel: 0,
+  arcCapLevel: 0,
+  glassedLevel: 0,
+  uplinkLevel: 0,
+  refractionLevel: 0,
+  overwatchLevel: 0,
+  concussiveLevel: 0,
+  staticMinesLevel: 0,
+  smokescreenLevel: 0,
+  cryoLevel: 0,
+  salvageLevel: 0,
+  momentumLevel: 0,
 }
 
 export const SYNERGIES = {
@@ -169,6 +183,83 @@ export const SYNERGIES = {
   thermite: {
     burnDpsMultBase: 0.8,
     burnDpsMultPerLevel: 0.3,
+  },
+  /** lock down × flamethrower: opposing statuses detonate, consuming both */
+  thermalshock: {
+    /** burst damage = bullet damage × (burstDamageMultBase + burstDamageMultPerLevel × (level − 1)) */
+    burstDamageMultBase: 2,
+    burstDamageMultPerLevel: 1,
+  },
+  /** tesla arc × flamethrower: the bolt jumps extra links per status afflicting its anchor */
+  discharge: {
+    linksPerStatusPerLevel: 1,
+  },
+  /** bfg × lock down: the discharge doubles as an EMP, flash-freezing the field */
+  emp: {
+    freezeMsBase: 800,
+    freezeMsPerLevel: 250,
+  },
+  /** bfg × tesla arc: residual charge arcs lightning into survivors after the discharge */
+  arccap: {
+    boltsBase: 3,
+    boltsPerLevel: 2,
+    damageMultBase: 1,
+    damageMultPerLevel: 0.4,
+  },
+  /** orbital laser × flamethrower: the strike leaves its blast zone burning */
+  glassed: {
+    burnDpsMultBase: 1,
+    burnDpsMultPerLevel: 0.4,
+  },
+  /** orbital laser × nanite: drone spotters — faster locks, elites painted first */
+  uplink: {
+    lockOnFactorBase: 0.7,
+    lockOnFactorPerLevel: 0.06,
+  },
+  /** thermal lance × cloud cover: a cloud refracts a second, weaker sweep */
+  refraction: {
+    damageFactorBase: 0.5,
+    damageFactorPerLevel: 0.1,
+    arcFactor: 0.6,
+  },
+  /** thermal lance × lock down: frozen invaders don't block the beam and take bonus damage */
+  overwatch: {
+    frozenDamageBonusBase: 0.25,
+    frozenDamageBonusPerLevel: 0.25,
+  },
+  /** nova pulse × mine layer: the pulse shoves invaders away from the city */
+  concussive: {
+    knockbackPxBase: 70,
+    knockbackPxPerLevel: 30,
+  },
+  /** mine layer × tesla arc: waiting mines zap and stun whatever drifts close */
+  staticmines: {
+    zapIntervalMs: 900,
+    zapRadiusPx: 90,
+    damageMultBase: 0.5,
+    damageMultPerLevel: 0.25,
+  },
+  /** mine layer × cloud cover: detonations leave a slowing smoke bank */
+  smokescreen: {
+    extraCloudCapPerLevel: 2,
+  },
+  /** flak × lock down: fragments chill what they strike */
+  cryoshells: {
+    chillMsBase: 1_200,
+    chillMsPerLevel: 400,
+    chillSlowFactor: 0.65,
+  },
+  /** devourer × flak: a consumed host bursts into a ring of flak fragments */
+  salvage: {
+    fragmentsBase: 6,
+    fragmentsPerLevel: 2,
+    damageMultBase: 0.4,
+    damageMultPerLevel: 0.15,
+  },
+  /** salvo × rocket pod: main-gun kills shave time off the rocket cooldown */
+  momentum: {
+    cooldownRefundMsBase: 150,
+    cooldownRefundMsPerLevel: 75,
   },
   /** rocket pod × mine layer: rocket blasts scatter armed mines */
   mirv: {
@@ -465,4 +556,7 @@ export const CHAIN = {
   baseChains: 3,
   chainsPerLevel: 1,
   jumpRadius: 190,
+  /** lightning stuns: everything struck stops dead for this long */
+  stunMsBase: 250,
+  stunMsPerLevel: 50,
 } as const

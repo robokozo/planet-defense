@@ -68,6 +68,12 @@ interface EnemyUnit {
   frozenRemainingMs: number
   /** burning DoT — re-igniting refreshes the clock, the strongest dps wins */
   burning: { dps: number; remainingMs: number; tickAccumulatorMs: number } | null
+  /** lightning stun: a dead stop, shorter than a freeze */
+  stunnedRemainingMs: number
+  /** cryo chill: a timed slow, separate from cloud cover's positional slow */
+  chilledRemainingMs: number
+  /** concussive shove still in flight — decays to null */
+  knockback: { velocityX: number; velocityY: number; remainingMs: number } | null
   /** bosses periodically deploy adds */
   spawnerAccumulatorMs: number
   /** shared timer for periodic behaviors: boss bolts, mender heals, elite regen */
@@ -142,6 +148,8 @@ interface MineUnit {
   /** randomizes the bobbing motion so mines don't sway in lockstep */
   bobPhase: number
   armRemainingMs: number
+  /** static mines synergy: time since the mine last zapped something */
+  zapAccumulatorMs: number
   isDead: boolean
 }
 
@@ -270,6 +278,8 @@ const MAX_FRAME_DELTA_MS = 100
 const DUMMY_PATROL_PERIOD_S = 5
 /** killable training dummies pop back up after this long */
 const DUMMY_RESPAWN_MS = 1_500
+/** how long a concussive shove takes to play out */
+const KNOCKBACK_DURATION_MS = 250
 /** gravity pulling lobbed mine shells back down, px/s² */
 const MINE_SHELL_GRAVITY = 700
 /** how far above its mine the balloon floats */
@@ -762,6 +772,9 @@ export class GameScene extends Phaser.Scene {
       isSlowed: false,
       frozenRemainingMs: 0,
       burning: null,
+      stunnedRemainingMs: 0,
+      chilledRemainingMs: 0,
+      knockback: null,
       spawnerAccumulatorMs: 0,
       attackAccumulatorMs: 0,
       hasShield: false,
@@ -981,6 +994,9 @@ export class GameScene extends Phaser.Scene {
       isSlowed: false,
       frozenRemainingMs: 0,
       burning: null,
+      stunnedRemainingMs: 0,
+      chilledRemainingMs: 0,
+      knockback: null,
       spawnerAccumulatorMs: 0,
       attackAccumulatorMs: 0,
       hasShield: definition.kind === 'warden',
@@ -1009,15 +1025,19 @@ export class GameScene extends Phaser.Scene {
     )
   }
 
-  /** current real speed in px/s — 0 while frozen, reduced inside clouds */
+  /** current real speed in px/s — 0 while frozen or stunned, reduced by clouds and chill */
   private effectiveEnemySpeed({ enemy }: { enemy: EnemyUnit }): number {
-    if (enemy.frozenRemainingMs > 0) {
+    if (enemy.frozenRemainingMs > 0 || enemy.stunnedRemainingMs > 0) {
       return 0
     }
+    let speed = enemy.speed
     if (enemy.isSlowed === true) {
-      return enemy.speed * this.cloudSlowFactor()
+      speed *= this.cloudSlowFactor()
     }
-    return enemy.speed
+    if (enemy.chilledRemainingMs > 0) {
+      speed *= SYNERGIES.cryoshells.chillSlowFactor
+    }
+    return speed
   }
 
   private moveEnemies({ delta }: { delta: number }): void {
@@ -1029,12 +1049,48 @@ export class GameScene extends Phaser.Scene {
         continue
       }
 
+      if (enemy.stunnedRemainingMs > 0) {
+        enemy.stunnedRemainingMs -= delta
+      }
+      if (enemy.chilledRemainingMs > 0) {
+        enemy.chilledRemainingMs -= delta
+      }
+      // a concussive shove moves even frozen or stunned targets
+      if (enemy.knockback !== null) {
+        enemy.knockback.remainingMs -= delta
+        const shoveX = enemy.knockback.velocityX * seconds
+        enemy.image.x = Phaser.Math.Clamp(
+          enemy.image.x + shoveX,
+          enemy.radius,
+          this.arenaWidth - enemy.radius,
+        )
+        enemy.image.y += enemy.knockback.velocityY * seconds
+        // weavers and patrollers compute x from a base — shift it so the shove sticks
+        if (enemy.zigzag !== null) {
+          enemy.zigzag.baseX = Phaser.Math.Clamp(
+            enemy.zigzag.baseX + shoveX,
+            enemy.radius,
+            this.arenaWidth - enemy.radius,
+          )
+        }
+        if (enemy.patrol !== null) {
+          enemy.patrol.baseX += shoveX
+        }
+        if (enemy.knockback.remainingMs <= 0) {
+          enemy.knockback = null
+        }
+      }
+
       if (enemy.frozenRemainingMs > 0) {
         enemy.frozenRemainingMs -= delta
         if (enemy.frozenRemainingMs <= 0 && enemy.image.tintMode === Phaser.TintModes.MULTIPLY) {
           enemy.image.clearTint()
           enemy.isSlowed = false
         }
+        continue
+      }
+
+      if (enemy.stunnedRemainingMs > 0) {
         continue
       }
 
@@ -1512,6 +1568,22 @@ export class GameScene extends Phaser.Scene {
       // host died (by us or anything else): the leftovers leap onward
       if (swarm.host.isDead === true) {
         swarm.isDead = true
+        // salvage protocol synergy: the consumed host bursts into flak fragments
+        if (this.stats.salvageLevel > 0) {
+          this.spawnFragmentRing({
+            x: swarm.x,
+            y: swarm.y,
+            count:
+              SYNERGIES.salvage.fragmentsBase +
+              SYNERGIES.salvage.fragmentsPerLevel * (this.stats.salvageLevel - 1),
+            damage:
+              this.stats.damage *
+              (SYNERGIES.salvage.damageMultBase +
+                SYNERGIES.salvage.damageMultPerLevel * (this.stats.salvageLevel - 1)),
+            source: 'flak',
+            travelPx: FLAK.fragmentTravelPx,
+          })
+        }
         if (swarm.remainingBudget <= 0) {
           continue
         }
@@ -1702,6 +1774,10 @@ export class GameScene extends Phaser.Scene {
   /** apply or refresh a burn — the strongest dps wins, the clock always resets */
   private igniteEnemy({ enemy, dps }: { enemy: EnemyUnit; dps: number }): void {
     if (enemy.isDead === true || dps <= 0) {
+      return
+    }
+    // thermal shock synergy: igniting a frozen invader detonates both statuses
+    if (enemy.frozenRemainingMs > 0 && this.tryThermalShock({ enemy }) === true) {
       return
     }
     if (enemy.burning === null) {
@@ -1917,6 +1993,11 @@ export class GameScene extends Phaser.Scene {
         ? SYNERGIES.stasis.freezeMsBase +
           SYNERGIES.stasis.freezeMsPerLevel * (this.stats.stasisLevel - 1)
         : 0
+    const knockbackPx =
+      this.stats.concussiveLevel > 0
+        ? SYNERGIES.concussive.knockbackPxBase +
+          SYNERGIES.concussive.knockbackPxPerLevel * (this.stats.concussiveLevel - 1)
+        : 0
     for (const enemy of this.enemies) {
       if (enemy.isDead === true) {
         continue
@@ -1925,6 +2006,14 @@ export class GameScene extends Phaser.Scene {
       if (distanceSq <= (NOVA.maxRadius + enemy.radius) ** 2) {
         if (stasisFreezeMs > 0) {
           this.applyFreeze({ enemy, durationMs: stasisFreezeMs })
+        }
+        // concussive pulse synergy: the wavefront shoves everything outward
+        if (knockbackPx > 0) {
+          this.applyKnockback({
+            enemy,
+            angleRad: Math.atan2(enemy.image.y - this.cannonY, enemy.image.x - originX),
+            distancePx: knockbackPx,
+          })
         }
         this.damageEnemy({
           enemy,
@@ -1939,10 +2028,103 @@ export class GameScene extends Phaser.Scene {
   }
 
   private applyFreeze({ enemy, durationMs }: { enemy: EnemyUnit; durationMs: number }): void {
+    // thermal shock synergy: freezing a burning invader detonates both statuses
+    if (enemy.burning !== null && this.tryThermalShock({ enemy }) === true) {
+      return
+    }
     enemy.frozenRemainingMs = Math.max(enemy.frozenRemainingMs, durationMs)
     if (enemy.image.tintMode === Phaser.TintModes.MULTIPLY) {
       enemy.image.setTint(0xbae6fd)
     }
+  }
+
+  /** lightning's status: a dead stop, shorter and cheaper than a freeze */
+  private applyStun({ enemy, durationMs }: { enemy: EnemyUnit; durationMs: number }): void {
+    if (enemy.isDead === true) {
+      return
+    }
+    enemy.stunnedRemainingMs = Math.max(enemy.stunnedRemainingMs, durationMs)
+    // a little jolt star over the head sells the stun
+    const jolt = this.add
+      .circle(enemy.image.x, enemy.image.y - enemy.radius - 8, 3, 0xfde047, 0.95)
+      .setDepth(DEPTHS.effects)
+    this.tweens.add({
+      targets: jolt,
+      y: jolt.y - 8,
+      radius: 5,
+      alpha: 0,
+      duration: 260,
+      ease: 'Cubic.easeOut',
+      onComplete: () => {
+        jolt.destroy()
+      },
+    })
+  }
+
+  /** cryo shells' status: a timed slow that stacks with cloud cover */
+  private applyChill({ enemy, durationMs }: { enemy: EnemyUnit; durationMs: number }): void {
+    if (enemy.isDead === true) {
+      return
+    }
+    enemy.chilledRemainingMs = Math.max(enemy.chilledRemainingMs, durationMs)
+    this.spawnExhaustPuff({ x: enemy.image.x, y: enemy.image.y, color: 0x67e8f9 })
+  }
+
+  /** a decaying shove — push direction and strength chosen by the caller */
+  private applyKnockback({
+    enemy,
+    angleRad,
+    distancePx,
+  }: {
+    enemy: EnemyUnit
+    angleRad: number
+    distancePx: number
+  }): void {
+    // the mothership is far too heavy to shove
+    if (enemy.isDead === true || enemy.definition.kind === 'mothership') {
+      return
+    }
+    const speed = distancePx / (KNOCKBACK_DURATION_MS / 1_000)
+    enemy.knockback = {
+      velocityX: Math.cos(angleRad) * speed,
+      velocityY: Math.sin(angleRad) * speed,
+      remainingMs: KNOCKBACK_DURATION_MS,
+    }
+  }
+
+  /**
+   * thermal shock synergy: opposing statuses annihilate — both are consumed
+   * and the target takes a burst. Returns false when the synergy isn't owned.
+   */
+  private tryThermalShock({ enemy }: { enemy: EnemyUnit }): boolean {
+    if (this.stats.thermalShockLevel <= 0) {
+      return false
+    }
+    enemy.burning = null
+    enemy.frozenRemainingMs = 0
+    if (enemy.image.tintMode === Phaser.TintModes.MULTIPLY) {
+      enemy.image.clearTint()
+    }
+    const flash = this.add
+      .circle(enemy.image.x, enemy.image.y, enemy.radius + 4)
+      .setStrokeStyle(3, 0xfef3c7, 0.95)
+      .setDepth(DEPTHS.effects)
+    this.tweens.add({
+      targets: flash,
+      radius: enemy.radius + 26,
+      alpha: 0,
+      duration: 280,
+      ease: 'Cubic.easeOut',
+      onComplete: () => {
+        flash.destroy()
+      },
+    })
+    const burst =
+      this.stats.damage *
+      (SYNERGIES.thermalshock.burstDamageMultBase +
+        SYNERGIES.thermalshock.burstDamageMultPerLevel * (this.stats.thermalShockLevel - 1))
+    this.damageEnemy({ enemy, amount: burst, source: 'shock' })
+    return true
   }
 
   // ── rockets ────────────────────────────────────────────────────────
@@ -2169,7 +2351,17 @@ export class GameScene extends Phaser.Scene {
       return false
     }
 
-    const maxStruck = CHAIN.baseChains + CHAIN.chainsPerLevel * (this.stats.chainLevel - 1)
+    let maxStruck = CHAIN.baseChains + CHAIN.chainsPerLevel * (this.stats.chainLevel - 1)
+    // static discharge synergy: afflictions on the anchor conduct extra links
+    if (this.stats.dischargeLevel > 0) {
+      const anchor = anchors[0]
+      const statusCount =
+        (anchor.burning !== null ? 1 : 0) +
+        (anchor.frozenRemainingMs > 0 ? 1 : 0) +
+        (anchor.chilledRemainingMs > 0 ? 1 : 0)
+      maxStruck +=
+        statusCount * SYNERGIES.discharge.linksPerStatusPerLevel * this.stats.dischargeLevel
+    }
     const struck: Array<EnemyUnit> = [anchors[0]]
     while (struck.length < maxStruck) {
       const tail = struck[struck.length - 1]
@@ -2189,8 +2381,10 @@ export class GameScene extends Phaser.Scene {
     const chainDamage =
       this.stats.damage *
       (CHAIN.baseDamageMult + CHAIN.damageMultPerLevel * (this.stats.chainLevel - 1))
+    const stunMs = CHAIN.stunMsBase + CHAIN.stunMsPerLevel * (this.stats.chainLevel - 1)
     for (const enemy of struck) {
       this.damageEnemy({ enemy, amount: chainDamage, source: 'chain' })
+      this.applyStun({ enemy, durationMs: stunMs })
     }
     return true
   }
@@ -2882,9 +3076,13 @@ export class GameScene extends Phaser.Scene {
     })
   }
 
-  /** cloud seeding synergy: spawn a small active cloud where the jet flew */
+  /** an extra active cloud — used by cloud seeding and smokescreen mines */
   private spawnSeededCloud({ x, y }: { x: number; y: number }): void {
-    if (this.cloudImages.length >= CLOUD.maxClouds + SYNERGIES.seeding.extraCloudCap) {
+    const cloudCap =
+      CLOUD.maxClouds +
+      SYNERGIES.seeding.extraCloudCap +
+      SYNERGIES.smokescreen.extraCloudCapPerLevel * this.stats.smokescreenLevel
+    if (this.cloudImages.length >= cloudCap) {
       return
     }
     const textureKey = `cloud-${Math.floor(Math.random() * 3)}`
@@ -3031,6 +3229,43 @@ export class GameScene extends Phaser.Scene {
       this.damageEnemy({ enemy, amount: bfgDamage, source: 'bfg' })
     }
 
+    // emp discharge synergy: the blast doubles as an EMP, flash-freezing the field
+    if (this.stats.empLevel > 0) {
+      const freezeMs =
+        SYNERGIES.emp.freezeMsBase + SYNERGIES.emp.freezeMsPerLevel * (this.stats.empLevel - 1)
+      for (const enemy of this.enemies) {
+        if (enemy.isDead === false) {
+          this.applyFreeze({ enemy, durationMs: freezeMs })
+        }
+      }
+    }
+
+    // arc capacitor synergy: residual charge arcs stunning lightning into survivors
+    if (this.stats.arcCapLevel > 0) {
+      const survivors = this.enemies.filter((enemy) => enemy.isDead === false)
+      const boltCount = Math.min(
+        survivors.length,
+        SYNERGIES.arccap.boltsBase + SYNERGIES.arccap.boltsPerLevel * (this.stats.arcCapLevel - 1),
+      )
+      const boltDamage =
+        this.stats.damage *
+        (SYNERGIES.arccap.damageMultBase +
+          SYNERGIES.arccap.damageMultPerLevel * (this.stats.arcCapLevel - 1))
+      const stunMs =
+        CHAIN.stunMsBase + CHAIN.stunMsPerLevel * Math.max(0, this.stats.chainLevel - 1)
+      for (let index = 0; index < boltCount; index += 1) {
+        const enemy = survivors.splice(Math.floor(Math.random() * survivors.length), 1)[0]
+        this.drawLightningBolt({
+          points: [
+            { x: mainCannon.x, y: mainCannon.y - 20 },
+            { x: enemy.image.x, y: enemy.image.y },
+          ],
+        })
+        this.damageEnemy({ enemy, amount: boltDamage, source: 'chain' })
+        this.applyStun({ enemy, durationMs: stunMs })
+      }
+    }
+
     // capacitor dump synergy: the discharge sets off a boosted nova on every cannon
     if (this.stats.capdumpLevel > 0) {
       const novaMultiplier =
@@ -3079,10 +3314,12 @@ export class GameScene extends Phaser.Scene {
         continue
       }
       // ray test: the beam stops at the first invader it touches — no piercing
+      // (overwatch synergy: frozen invaders are glassed straight through instead)
       const directionX = Math.cos(sweep.angleRad)
       const directionY = Math.sin(sweep.angleRad)
       let blocker: EnemyUnit | null = null
       let blockerAlong = Number.POSITIVE_INFINITY
+      const piercedFrozen: Array<{ enemy: EnemyUnit; along: number }> = []
       for (const enemy of this.enemies) {
         if (enemy.isDead === true) {
           continue
@@ -3094,25 +3331,50 @@ export class GameScene extends Phaser.Scene {
           continue
         }
         const perpendicular = Math.abs(toEnemyX * directionY - toEnemyY * directionX)
-        if (perpendicular <= enemy.radius + LANCE.beamHalfWidthPx && along < blockerAlong) {
+        if (perpendicular > enemy.radius + LANCE.beamHalfWidthPx) {
+          continue
+        }
+        if (this.stats.overwatchLevel > 0 && enemy.frozenRemainingMs > 0) {
+          piercedFrozen.push({ enemy, along })
+          continue
+        }
+        if (along < blockerAlong) {
           blocker = enemy
           blockerAlong = along
         }
       }
       sweep.currentLengthPx = blocker === null ? this.stats.range : blockerAlong
+      const thermiteDps =
+        this.stats.thermiteLevel > 0
+          ? this.stats.damage *
+            (SYNERGIES.thermite.burnDpsMultBase +
+              SYNERGIES.thermite.burnDpsMultPerLevel * (this.stats.thermiteLevel - 1))
+          : 0
       if (blocker !== null && sweep.hitEnemies.has(blocker) === false) {
         sweep.hitEnemies.add(blocker)
         this.damageEnemy({ enemy: blocker, amount: sweep.damage, source: 'lance' })
         // thermite beam synergy: everything the lance sears keeps burning
-        if (this.stats.thermiteLevel > 0) {
-          this.igniteEnemy({
-            enemy: blocker,
-            dps:
-              this.stats.damage *
-              (SYNERGIES.thermite.burnDpsMultBase +
-                SYNERGIES.thermite.burnDpsMultPerLevel * (this.stats.thermiteLevel - 1)),
-          })
+        this.igniteEnemy({ enemy: blocker, dps: thermiteDps })
+      }
+      const overwatchBonus =
+        1 +
+        SYNERGIES.overwatch.frozenDamageBonusBase +
+        SYNERGIES.overwatch.frozenDamageBonusPerLevel * Math.max(0, this.stats.overwatchLevel - 1)
+      for (const pierced of piercedFrozen) {
+        // only frozen targets the (possibly shortened) beam still reaches
+        if (pierced.along > sweep.currentLengthPx + pierced.enemy.radius) {
+          continue
         }
+        if (sweep.hitEnemies.has(pierced.enemy) === true) {
+          continue
+        }
+        sweep.hitEnemies.add(pierced.enemy)
+        this.damageEnemy({
+          enemy: pierced.enemy,
+          amount: sweep.damage * overwatchBonus,
+          source: 'lance',
+        })
+        this.igniteEnemy({ enemy: pierced.enemy, dps: thermiteDps })
       }
     }
     this.sweeps = this.sweeps.filter((sweep) => sweep.isDead === false)
@@ -3147,17 +3409,65 @@ export class GameScene extends Phaser.Scene {
     })
     this.shakeCamera({ durationMs: 140, intensity: 0.004 })
 
+    const sweepDamage =
+      this.stats.damage * (LANCE.baseDamageMult + LANCE.damageMultPerLevel * (level - 1))
     this.sweeps.push({
       originX,
       originY,
       angleRad: clampAngle(centerAngle - (spanRad / 2) * directionSign),
       endAngleRad: clampAngle(centerAngle + (spanRad / 2) * directionSign),
       directionSign,
-      damage: this.stats.damage * (LANCE.baseDamageMult + LANCE.damageMultPerLevel * (level - 1)),
+      damage: sweepDamage,
       hitEnemies: new Set(),
       currentLengthPx: this.stats.range,
       isDead: false,
     })
+
+    // refraction synergy: the cloud bank splits off a second, weaker sweep
+    if (this.stats.refractionLevel > 0 && this.cloudImages.length > 0) {
+      let nearestCloud = this.cloudImages[0]
+      let nearestDistanceSq = Number.POSITIVE_INFINITY
+      for (const cloud of this.cloudImages) {
+        const distanceSq =
+          (cloud.image.x - target.image.x) ** 2 + (cloud.image.y - target.image.y) ** 2
+        if (distanceSq < nearestDistanceSq) {
+          nearestDistanceSq = distanceSq
+          nearestCloud = cloud
+        }
+      }
+      const echoOriginX = nearestCloud.image.x
+      const echoOriginY = nearestCloud.image.y
+      const echoCenter = Math.atan2(target.image.y - echoOriginY, target.image.x - echoOriginX)
+      const echoSpan = spanRad * SYNERGIES.refraction.arcFactor
+      const echoFlare = this.add
+        .circle(echoOriginX, echoOriginY, 8, 0xfefce8, 0.9)
+        .setDepth(DEPTHS.effects)
+      this.tweens.add({
+        targets: echoFlare,
+        radius: 18,
+        alpha: 0,
+        duration: 300,
+        ease: 'Cubic.easeOut',
+        onComplete: () => {
+          echoFlare.destroy()
+        },
+      })
+      this.sweeps.push({
+        originX: echoOriginX,
+        originY: echoOriginY,
+        // a cloud can fire downward — no sky clamp on the refracted beam
+        angleRad: echoCenter - (echoSpan / 2) * directionSign,
+        endAngleRad: echoCenter + (echoSpan / 2) * directionSign,
+        directionSign,
+        damage:
+          sweepDamage *
+          (SYNERGIES.refraction.damageFactorBase +
+            SYNERGIES.refraction.damageFactorPerLevel * (this.stats.refractionLevel - 1)),
+        hitEnemies: new Set(),
+        currentLengthPx: this.stats.range,
+        isDead: false,
+      })
+    }
   }
 
   /** redrawn every frame: the lance is a laser firing out of the gun, sweeping the sky */
@@ -3290,6 +3600,45 @@ export class GameScene extends Phaser.Scene {
         mine.armRemainingMs -= delta
         continue
       }
+      // static mines synergy: a waiting mine zaps and stuns whatever drifts near
+      if (this.stats.staticMinesLevel > 0) {
+        mine.zapAccumulatorMs += delta
+        if (mine.zapAccumulatorMs >= SYNERGIES.staticmines.zapIntervalMs) {
+          let zapTarget: EnemyUnit | null = null
+          let zapDistanceSq = SYNERGIES.staticmines.zapRadiusPx ** 2
+          for (const enemy of this.enemies) {
+            if (enemy.isDead === true) {
+              continue
+            }
+            const distanceSq =
+              (enemy.image.x - mine.image.x) ** 2 + (enemy.image.y - mine.image.y) ** 2
+            if (distanceSq <= zapDistanceSq) {
+              zapDistanceSq = distanceSq
+              zapTarget = enemy
+            }
+          }
+          if (zapTarget === null) {
+            mine.zapAccumulatorMs = SYNERGIES.staticmines.zapIntervalMs
+          } else {
+            mine.zapAccumulatorMs = 0
+            this.drawLightningBolt({
+              points: [
+                { x: mine.image.x, y: mine.image.y },
+                { x: zapTarget.image.x, y: zapTarget.image.y },
+              ],
+            })
+            this.damageEnemy({
+              enemy: zapTarget,
+              amount:
+                this.stats.damage *
+                (SYNERGIES.staticmines.damageMultBase +
+                  SYNERGIES.staticmines.damageMultPerLevel * (this.stats.staticMinesLevel - 1)),
+              source: 'mines',
+            })
+            this.applyStun({ enemy: zapTarget, durationMs: CHAIN.stunMsBase })
+          }
+        }
+      }
       for (const enemy of this.enemies) {
         if (enemy.isDead === true) {
           continue
@@ -3307,6 +3656,10 @@ export class GameScene extends Phaser.Scene {
               (MINES.baseDamageMult + MINES.damageMultPerLevel * (this.stats.mineLevel - 1)),
             source: 'mines',
           })
+          // smokescreen synergy: the detonation leaves a slowing smoke bank
+          if (this.stats.smokescreenLevel > 0) {
+            this.spawnSeededCloud({ x: mine.image.x, y: mine.image.y })
+          }
           this.destroyMine({ mine })
           break
         }
@@ -3381,6 +3734,7 @@ export class GameScene extends Phaser.Scene {
       baseY: y,
       bobPhase: Math.random() * Math.PI * 2,
       armRemainingMs: MINES.armDelayMs,
+      zapAccumulatorMs: 0,
       isDead: false,
     })
   }
@@ -3405,6 +3759,22 @@ export class GameScene extends Phaser.Scene {
           lockOnMs *=
             SYNERGIES.painted.lockOnFactorBase -
             SYNERGIES.painted.lockOnFactorPerLevel * (this.stats.paintedLevel - 1)
+        }
+        // target uplink synergy: drone spotters paint elites first and speed the lock
+        if (this.stats.uplinkLevel > 0) {
+          if (target === null) {
+            const elitePool = this.enemies.filter(
+              (enemy) =>
+                enemy.isDead === false &&
+                (enemy.affix !== null || enemy.definition.kind === 'mothership'),
+            )
+            if (elitePool.length > 0) {
+              target = this.findClusterTarget({ pool: elitePool })
+            }
+          }
+          lockOnMs *=
+            SYNERGIES.uplink.lockOnFactorBase -
+            SYNERGIES.uplink.lockOnFactorPerLevel * (this.stats.uplinkLevel - 1)
         }
         target = target ?? this.findClusterTarget()
         if (target === null) {
@@ -3469,6 +3839,23 @@ export class GameScene extends Phaser.Scene {
       damage,
       source: 'orbital-laser',
     })
+
+    // glassed sky synergy: the strike leaves its blast zone burning
+    if (this.stats.glassedLevel > 0) {
+      const burnDps =
+        this.stats.damage *
+        (SYNERGIES.glassed.burnDpsMultBase +
+          SYNERGIES.glassed.burnDpsMultPerLevel * (this.stats.glassedLevel - 1))
+      for (const enemy of this.enemies) {
+        if (enemy.isDead === true) {
+          continue
+        }
+        const distanceSq = (enemy.image.x - strike.x) ** 2 + (enemy.image.y - strike.y) ** 2
+        if (distanceSq <= (radius + enemy.radius) ** 2) {
+          this.igniteEnemy({ enemy, dps: burnDps })
+        }
+      }
+    }
   }
 
   // ── storm front (tesla arc × cloud cover synergy) ──────────────────
@@ -3701,27 +4088,52 @@ export class GameScene extends Phaser.Scene {
 
   /** cluster bombs synergy: each blast also sprays short-lived flak fragments */
   private burstClusterFragments({ x, y }: { x: number; y: number }): void {
-    const fragmentCount =
-      CLUSTER_BOMBS.baseFragments + CLUSTER_BOMBS.fragmentsPerLevel * (this.stats.clusterLevel - 1)
-    const fragmentDamage =
-      this.stats.damage *
-      (CLUSTER_BOMBS.baseDamageMult +
-        CLUSTER_BOMBS.damageMultPerLevel * (this.stats.clusterLevel - 1))
+    this.spawnFragmentRing({
+      x,
+      y,
+      count:
+        CLUSTER_BOMBS.baseFragments +
+        CLUSTER_BOMBS.fragmentsPerLevel * (this.stats.clusterLevel - 1),
+      damage:
+        this.stats.damage *
+        (CLUSTER_BOMBS.baseDamageMult +
+          CLUSTER_BOMBS.damageMultPerLevel * (this.stats.clusterLevel - 1)),
+      source: 'cluster',
+      travelPx: CLUSTER_BOMBS.fragmentTravelPx,
+    })
+  }
+
+  /** an even ring of flak fragments — cluster bombs and salvage bursts share it */
+  private spawnFragmentRing({
+    x,
+    y,
+    count,
+    damage,
+    source,
+    travelPx,
+  }: {
+    x: number
+    y: number
+    count: number
+    damage: number
+    source: string
+    travelPx: number
+  }): void {
     const fragmentSpeed = this.stats.projectileSpeed * 0.6
     const startAngle = Math.random() * Math.PI * 2
-    for (let index = 0; index < fragmentCount; index += 1) {
-      const angle = startAngle + (index * Math.PI * 2) / fragmentCount
+    for (let index = 0; index < count; index += 1) {
+      const angle = startAngle + (index * Math.PI * 2) / count
       const image = this.add.image(x, y, 'flak-frag').setDepth(DEPTHS.bullets)
       this.bullets.push({
         image,
-        source: 'cluster',
+        source,
         velocityX: Math.cos(angle) * fragmentSpeed,
         velocityY: Math.sin(angle) * fragmentSpeed,
-        damage: fragmentDamage,
+        damage,
         isCrit: false,
         pierceLeft: 0,
         traveledPx: 0,
-        maxTravelPx: CLUSTER_BOMBS.fragmentTravelPx,
+        maxTravelPx: travelPx,
         isFlakShell: false,
         hitEnemies: new Set(),
         isDead: false,
@@ -3988,6 +4400,15 @@ export class GameScene extends Phaser.Scene {
                 SYNERGIES.incendiary.burnDpsMultPerLevel * (this.stats.incendiaryLevel - 1)),
           })
         }
+        // cryo shells synergy: flak fragments chill what they strike
+        if (this.stats.cryoLevel > 0 && bullet.source === 'flak') {
+          this.applyChill({
+            enemy,
+            durationMs:
+              SYNERGIES.cryoshells.chillMsBase +
+              SYNERGIES.cryoshells.chillMsPerLevel * (this.stats.cryoLevel - 1),
+          })
+        }
         if (bullet.pierceLeft <= 0) {
           bullet.isDead = true
           break
@@ -4090,6 +4511,16 @@ export class GameScene extends Phaser.Scene {
       // wildfire synergy: a burning casualty's fire leaps to its neighbors
       if (this.stats.wildfireLevel > 0 && enemy.burning !== null) {
         this.spreadWildfire({ from: enemy })
+      }
+
+      // momentum synergy: a main-gun kill feeds the rocket autoloader
+      if (this.stats.momentumLevel > 0 && this.stats.rocketLevel > 0 && source === 'main') {
+        const refundMs =
+          SYNERGIES.momentum.cooldownRefundMsBase +
+          SYNERGIES.momentum.cooldownRefundMsPerLevel * (this.stats.momentumLevel - 1)
+        for (const cannon of this.cannons) {
+          cannon.cooldowns.set('rocket', (cannon.cooldowns.get('rocket') ?? 0) + refundMs)
+        }
       }
 
       // killable training dummies pop back up at their station shortly after

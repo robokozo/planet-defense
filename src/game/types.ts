@@ -63,6 +63,20 @@ export interface RunStats {
   napalmLevel: number
   wildfireLevel: number
   thermiteLevel: number
+  thermalShockLevel: number
+  dischargeLevel: number
+  empLevel: number
+  arcCapLevel: number
+  glassedLevel: number
+  uplinkLevel: number
+  refractionLevel: number
+  overwatchLevel: number
+  concussiveLevel: number
+  staticMinesLevel: number
+  smokescreenLevel: number
+  cryoLevel: number
+  salvageLevel: number
+  momentumLevel: number
 }
 
 export type UpgradeRarity = 'common' | 'rare' | 'epic' | 'legendary'

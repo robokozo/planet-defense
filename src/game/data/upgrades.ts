@@ -125,7 +125,8 @@ export const UPGRADE_DEFINITIONS: Array<UpgradeDefinition> = [
   {
     id: 'chain',
     name: 'Tesla Arc',
-    description: 'Periodically arcs lightning between invaders (stacks: more jumps, more damage)',
+    description:
+      'Periodically arcs lightning between invaders, briefly stunning everything struck (stacks: more jumps, more damage, longer stun)',
     rarity: 'rare',
     category: 'weapon',
     maxStacks: BASE_MAX_STACKS,
@@ -424,6 +425,202 @@ export const UPGRADE_DEFINITIONS: Array<UpgradeDefinition> = [
       { id: 'flame', stacks: 2 },
     ],
     apply: (stats) => ({ ...stats, thermiteLevel: stats.thermiteLevel + 1 }),
+  },
+  {
+    id: 'thermalshock',
+    name: 'Thermal Shock',
+    description:
+      'Synergy: fire meets ice — igniting a frozen invader or freezing a burning one detonates both statuses in a violent burst (stacks: bigger burst)',
+    rarity: 'epic',
+    category: 'tactic',
+    maxStacks: BASE_MAX_STACKS,
+    requires: [
+      { id: 'lockdown', stacks: 2 },
+      { id: 'flame', stacks: 2 },
+    ],
+    apply: (stats) => ({ ...stats, thermalShockLevel: stats.thermalShockLevel + 1 }),
+  },
+  {
+    id: 'discharge',
+    name: 'Static Discharge',
+    description:
+      'Synergy: afflictions conduct — the tesla bolt jumps extra links for every status (burning, chilled, frozen) on its first target (stacks: more links per status)',
+    rarity: 'epic',
+    category: 'tactic',
+    maxStacks: BASE_MAX_STACKS,
+    requires: [
+      { id: 'chain', stacks: 2 },
+      { id: 'flame', stacks: 2 },
+    ],
+    apply: (stats) => ({ ...stats, dischargeLevel: stats.dischargeLevel + 1 }),
+  },
+  {
+    id: 'emp',
+    name: 'EMP Discharge',
+    description:
+      'Synergy: the BFG blast doubles as an EMP, flash-freezing every invader on screen (stacks: longer freeze)',
+    rarity: 'epic',
+    category: 'tactic',
+    maxStacks: BASE_MAX_STACKS,
+    requires: [
+      { id: 'bfg', stacks: 2 },
+      { id: 'lockdown', stacks: 2 },
+    ],
+    apply: (stats) => ({ ...stats, empLevel: stats.empLevel + 1 }),
+  },
+  {
+    id: 'arccap',
+    name: 'Arc Capacitor',
+    description:
+      'Synergy: after the BFG discharge, residual charge arcs stunning lightning into the survivors (stacks: more bolts)',
+    rarity: 'epic',
+    category: 'tactic',
+    maxStacks: BASE_MAX_STACKS,
+    requires: [
+      { id: 'bfg', stacks: 2 },
+      { id: 'chain', stacks: 2 },
+    ],
+    apply: (stats) => ({ ...stats, arcCapLevel: stats.arcCapLevel + 1 }),
+  },
+  {
+    id: 'glassed',
+    name: 'Glassed Sky',
+    description:
+      'Synergy: the orbital strike glasses its impact zone, leaving everything inside burning (stacks: hotter burn)',
+    rarity: 'epic',
+    category: 'tactic',
+    maxStacks: BASE_MAX_STACKS,
+    requires: [
+      { id: 'orbital-laser', stacks: 2 },
+      { id: 'flame', stacks: 2 },
+    ],
+    apply: (stats) => ({ ...stats, glassedLevel: stats.glassedLevel + 1 }),
+  },
+  {
+    id: 'uplink',
+    name: 'Target Uplink',
+    description:
+      'Synergy: repair drones double as spotters — the orbital laser locks on faster and paints elites first (stacks: faster locks)',
+    rarity: 'epic',
+    category: 'tactic',
+    maxStacks: BASE_MAX_STACKS,
+    requires: [
+      { id: 'orbital-laser', stacks: 2 },
+      { id: 'nanite', stacks: 2 },
+    ],
+    apply: (stats) => ({ ...stats, uplinkLevel: stats.uplinkLevel + 1 }),
+  },
+  {
+    id: 'refraction',
+    name: 'Refraction',
+    description:
+      'Synergy: a cloud refracts every lance shot, splitting off a second weaker sweep from the cloud bank (stacks: stronger echo)',
+    rarity: 'epic',
+    category: 'tactic',
+    maxStacks: BASE_MAX_STACKS,
+    requires: [
+      { id: 'lance', stacks: 2 },
+      { id: 'cloud', stacks: 2 },
+    ],
+    apply: (stats) => ({ ...stats, refractionLevel: stats.refractionLevel + 1 }),
+  },
+  {
+    id: 'overwatch',
+    name: 'Overwatch',
+    description:
+      'Synergy: the lance glasses straight through frozen invaders — they take bonus damage and never block the beam (stacks: more bonus)',
+    rarity: 'epic',
+    category: 'tactic',
+    maxStacks: BASE_MAX_STACKS,
+    requires: [
+      { id: 'lance', stacks: 2 },
+      { id: 'lockdown', stacks: 2 },
+    ],
+    apply: (stats) => ({ ...stats, overwatchLevel: stats.overwatchLevel + 1 }),
+  },
+  {
+    id: 'concussive',
+    name: 'Concussive Pulse',
+    description:
+      'Synergy: nova pulses shove invaders away from the city — ideally into your minefield (stacks: harder shove)',
+    rarity: 'epic',
+    category: 'tactic',
+    maxStacks: BASE_MAX_STACKS,
+    requires: [
+      { id: 'nova', stacks: 2 },
+      { id: 'mines', stacks: 2 },
+    ],
+    apply: (stats) => ({ ...stats, concussiveLevel: stats.concussiveLevel + 1 }),
+  },
+  {
+    id: 'staticmines',
+    name: 'Static Mines',
+    description:
+      'Synergy: waiting mines crackle with charge, zapping and stunning anything that drifts near without detonating (stacks: stronger zaps)',
+    rarity: 'epic',
+    category: 'tactic',
+    maxStacks: BASE_MAX_STACKS,
+    requires: [
+      { id: 'mines', stacks: 2 },
+      { id: 'chain', stacks: 2 },
+    ],
+    apply: (stats) => ({ ...stats, staticMinesLevel: stats.staticMinesLevel + 1 }),
+  },
+  {
+    id: 'smokescreen',
+    name: 'Smokescreen',
+    description:
+      'Synergy: detonating mines leave a slowing smoke bank hanging at the blast site (stacks: more smoke can linger)',
+    rarity: 'epic',
+    category: 'tactic',
+    maxStacks: BASE_MAX_STACKS,
+    requires: [
+      { id: 'mines', stacks: 2 },
+      { id: 'cloud', stacks: 2 },
+    ],
+    apply: (stats) => ({ ...stats, smokescreenLevel: stats.smokescreenLevel + 1 }),
+  },
+  {
+    id: 'cryoshells',
+    name: 'Cryo Shells',
+    description:
+      'Synergy: flak fragments are cryo-charged — struck invaders are chilled and crawl at reduced speed (stacks: longer chill)',
+    rarity: 'epic',
+    category: 'tactic',
+    maxStacks: BASE_MAX_STACKS,
+    requires: [
+      { id: 'flak', stacks: 2 },
+      { id: 'lockdown', stacks: 2 },
+    ],
+    apply: (stats) => ({ ...stats, cryoLevel: stats.cryoLevel + 1 }),
+  },
+  {
+    id: 'salvage',
+    name: 'Salvage Protocol',
+    description:
+      'Synergy: when the swarm finishes consuming a host, it spits the scrap back out as a ring of flak fragments (stacks: more fragments)',
+    rarity: 'epic',
+    category: 'tactic',
+    maxStacks: BASE_MAX_STACKS,
+    requires: [
+      { id: 'devourer', stacks: 2 },
+      { id: 'flak', stacks: 2 },
+    ],
+    apply: (stats) => ({ ...stats, salvageLevel: stats.salvageLevel + 1 }),
+  },
+  {
+    id: 'momentum',
+    name: 'Momentum',
+    description:
+      'Synergy: every main-gun kill feeds the autoloader, shaving time off the rocket cooldown (stacks: bigger refund)',
+    rarity: 'epic',
+    category: 'tactic',
+    maxStacks: BASE_MAX_STACKS,
+    requires: [
+      { id: 'salvo', stacks: 2 },
+      { id: 'rocket', stacks: 2 },
+    ],
+    apply: (stats) => ({ ...stats, momentumLevel: stats.momentumLevel + 1 }),
   },
   {
     id: 'mirv',
