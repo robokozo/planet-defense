@@ -46,6 +46,15 @@ function setPrestige({ level }: { level: number }): void {
   scheduleRestart()
 }
 
+/** force a cannon count (same arena) — isolates per-gun value for balance work */
+const CANNON_OPTIONS: Array<number | null> = [null, 1, 2, 3, 4]
+const cannonOverride = ref<number | null>(null)
+
+function setCannons({ count }: { count: number | null }): void {
+  cannonOverride.value = count
+  scheduleRestart()
+}
+
 function setSpeed({ multiplier }: { multiplier: number }): void {
   speedMultiplier.value = multiplier
   gameEventBus.emit({ event: 'set-speed', payload: { multiplier } })
@@ -127,10 +136,10 @@ function startGame(): void {
   game = createPlanetGame({
     parent: gameContainer.value,
     sceneData: {
-      startingStats: applyPrestige({
-        stats: buildSandboxStats(),
-        prestigeLevel: prestigeLevel.value,
-      }),
+      startingStats: {
+        ...applyPrestige({ stats: buildSandboxStats(), prestigeLevel: prestigeLevel.value }),
+        ...(cannonOverride.value !== null ? { cannonCount: cannonOverride.value } : {}),
+      },
       stardustMultiplier: 1,
       mode: 'sandbox',
       prestigeLevel: prestigeLevel.value,
@@ -493,6 +502,26 @@ onUnmounted(() => {
             @click="setDummyHp({ hp: option })"
           >
             {{ option === null ? '∞' : option }}
+          </button>
+        </div>
+
+        <div class="flex items-center gap-1.5" data-testid="sim-cannons">
+          <p class="w-16 shrink-0 text-xs font-bold uppercase tracking-wider text-slate-500">
+            Guns
+          </p>
+          <button
+            v-for="option in CANNON_OPTIONS"
+            :key="option ?? 'auto'"
+            type="button"
+            class="flex-1 cursor-pointer rounded-lg px-2 py-1.5 text-xs font-semibold transition"
+            :class="
+              cannonOverride === option
+                ? 'bg-lime-400 text-slate-950'
+                : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+            "
+            @click="setCannons({ count: option })"
+          >
+            {{ option ?? 'auto' }}
           </button>
         </div>
 

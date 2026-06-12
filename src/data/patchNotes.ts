@@ -22,6 +22,21 @@ export interface PatchEntry {
 export const PATCH_NOTES: Array<PatchEntry> = [
   {
     date: '2026-06-12',
+    title: 'Priced by the Lab',
+    blurb: 'The legendary expansion nodes now cost what they measure.',
+    notes: [
+      {
+        kind: 'balance',
+        text: 'We benchmarked the three expansion effects with a mid-game kit: an extra gun added ~68 DPS, a fourth weapon line ~90, and raising every weapon cap from ★5 to ★6 a whopping ~153. Prices now follow the data: weapon-tier nodes ✦4000, weapon-slot nodes ✦3400, extra-cannon nodes ✦3000 (cannons are great early, but prestige keeps adding guns anyway).',
+      },
+      {
+        kind: 'new',
+        text: 'Training range: a Guns row pins the cannon count (independent of presets), so weapon value can be measured per-gun.',
+      },
+    ],
+  },
+  {
+    date: '2026-06-12',
     title: 'Sticker Shock',
     blurb: 'Prices now match power.',
     notes: [
