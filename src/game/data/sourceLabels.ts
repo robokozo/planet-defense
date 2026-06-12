@@ -9,7 +9,7 @@ export const SOURCE_LABELS: Record<string, string> = {
   lance: 'Thermal Lance',
   flame: 'Flamethrower',
   devourer: 'Devourer Swarm',
-  mines: 'Mine Layer',
+  mines: 'Balloon Mines',
   'orbital-laser': 'Orbital Laser',
   airstrike: 'Strafing Run',
   bfg: 'BFG',

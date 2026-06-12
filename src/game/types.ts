@@ -27,6 +27,8 @@ export interface RunStats {
   banishesPerRun: number
   /** the capacitor is a paragon keystone unlock, like the aegis shield */
   hasCapacitor: boolean
+  /** stardust generated per minute of battle (reactor dust siphons) */
+  passiveDustPerMinute: number
   /** multiplier on how fast kills charge the capacitor */
   capacitorChargeRate: number
   /** all-weapon damage bonus while a surge is active (0.25 = +25%) */

@@ -45,6 +45,10 @@ export const PATCH_NOTES: Array<PatchEntry> = [
         kind: 'fix',
         text: 'Damage numbers are bigger and outlined, so you can actually read them mid-fight.',
       },
+      {
+        kind: 'fix',
+        text: 'The Mine Layer is now called Balloon Mines — it was always balloons.',
+      },
     ],
   },
   {
@@ -58,15 +62,15 @@ export const PATCH_NOTES: Array<PatchEntry> = [
       },
       {
         kind: 'new',
-        text: 'Charge Coils minors speed up the capacitor, and the Overcharge Core expansion starts every run half charged with harder surges.',
+        text: 'Passive earning: Dust Siphon nodes generate stardust for every minute of battle you survive, banked into the run reward.',
       },
       {
         kind: 'new',
-        text: 'Passive earning: Trickle Cell nodes generate stardust per real-world hour, banked whenever you return to the home screen (up to 12 hours accrue while away).',
+        text: 'Interest: Compound Cell minors and the Compound Interest notable pay up to ~9% interest on unspent stardust at the end of every run — savers are rewarded for sitting on a bank.',
       },
       {
         kind: 'new',
-        text: 'Compound Interest notable: unspent stardust earns 5% interest at the end of every run — savers are rewarded for sitting on a bank.',
+        text: 'The Overcharge Core expansion starts every run half charged, with faster charging and harder surges.',
       },
     ],
   },

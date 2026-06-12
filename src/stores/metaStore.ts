@@ -2,7 +2,6 @@ import { useLocalStorage } from '@vueuse/core'
 import { defineStore } from 'pinia'
 import { computed } from 'vue'
 
-import { PASSIVE_EARNING_CAP_HOURS } from '@/game/data/balance'
 import type { RunResult } from '@/game/types'
 import {
   ROOT_NODE_ID,
@@ -10,7 +9,6 @@ import {
   SKILL_NODES_BY_ID,
   interestPercentFrom,
   listAdjacentNodeIds,
-  passiveStardustPerHourFrom,
 } from '@/skills/skillTree'
 
 interface LifetimeStats {
@@ -41,8 +39,6 @@ export const useMetaStore = defineStore('meta', () => {
     ),
   )
   const prestigeLevel = useLocalStorage<number>('pd-prestige', 0)
-  /** when passive (trickle cell) stardust was last banked */
-  const passiveClaimedAtMs = useLocalStorage<number>('pd-passive-claimed-at', Date.now())
 
   // saves from before a tree redesign reference node ids that no longer
   // exist: reset the tree and refund everything ever earned
@@ -207,35 +203,6 @@ export const useMetaStore = defineStore('meta', () => {
     }
   }
 
-  /**
-   * Bank trickle-cell stardust accrued since the last claim (called when the
-   * home screen loads). Accrual is capped, and the clock only resets once at
-   * least one whole stardust is ready, so fractions are never lost.
-   */
-  function claimPassiveStardust(): number {
-    const ratePerHour = passiveStardustPerHourFrom({ unlockedNodeIds: unlockedNodeIds.value })
-    const now = Date.now()
-    if (ratePerHour <= 0) {
-      passiveClaimedAtMs.value = now
-      return 0
-    }
-    const elapsedHours = Math.min(
-      PASSIVE_EARNING_CAP_HOURS,
-      Math.max(0, (now - passiveClaimedAtMs.value) / 3_600_000),
-    )
-    const earned = Math.floor(ratePerHour * elapsedHours)
-    if (earned < 1) {
-      return 0
-    }
-    passiveClaimedAtMs.value = now
-    stardust.value += earned
-    lifetime.value = {
-      ...lifetime.value,
-      totalStardustEarned: lifetime.value.totalStardustEarned + earned,
-    }
-    return earned
-  }
-
   const totalSpentOnTree = computed(() => treeSpent.value)
 
   return {
@@ -257,6 +224,5 @@ export const useMetaStore = defineStore('meta', () => {
     exportSave,
     importSave,
     recordRun,
-    claimPassiveStardust,
   }
 })

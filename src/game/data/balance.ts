@@ -65,9 +65,6 @@ export const CAPACITOR = {
   bossKillBonus: 0.2,
 } as const
 
-/** passive stardust accrues while away, but only up to this many hours bank up */
-export const PASSIVE_EARNING_CAP_HOURS = 12
-
 export const NOVA = {
   maxRadius: 320,
   expandDurationMs: 450,
@@ -105,6 +102,7 @@ export const BASE_RUN_STATS: RunStats = {
   rerollsPerRun: 1,
   banishesPerRun: 0,
   hasCapacitor: false,
+  passiveDustPerMinute: 0,
   capacitorChargeRate: 1,
   surgeDamageBonus: 0.25,
   surgeDurationMs: 6_000,

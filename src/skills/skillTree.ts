@@ -37,7 +37,7 @@ export type MetaStat =
   | 'surgeDamagePercent'
   | 'surgeDurationMsFlat'
   | 'capacitorStartPercent'
-  | 'passivePerHourFlat'
+  | 'passivePerMinuteFlat'
   | 'interestPercentFlat'
 
 export interface SkillEffect {
@@ -381,19 +381,19 @@ const BRANCH_DEFINITIONS: Array<BranchDefinition> = [
     angleDeg: 308.57,
     minors: {
       primary: {
-        name: 'Charge Coils',
-        description: '+5% capacitor charge rate',
-        effects: [{ stat: 'capacitorChargePercent', amount: 5 }],
+        name: 'Dust Siphon',
+        description: '+1 stardust generated per minute of battle',
+        effects: [{ stat: 'passivePerMinuteFlat', amount: 1 }],
       },
       secondary: {
-        name: 'Trickle Cells',
-        description: '+2 stardust generated per hour, even while away',
-        effects: [{ stat: 'passivePerHourFlat', amount: 2 }],
+        name: 'Compound Cells',
+        description: '+0.5% interest on unspent stardust after every run',
+        effects: [{ stat: 'interestPercentFlat', amount: 0.5 }],
       },
     },
     notable: {
       name: 'Compound Interest',
-      description: 'Unspent stardust earns 5% interest at the end of every run',
+      description: 'Unspent stardust earns +5% interest at the end of every run',
       effects: [{ stat: 'interestPercentFlat', amount: 5 }],
     },
     keystone: {
@@ -639,7 +639,8 @@ function buildSkillNodes(): Array<SkillNode> {
     {
       id: 'reactor-expansion',
       name: 'Overcharge Core',
-      description: 'Start every run with the capacitor half charged, and surges hit +25% harder',
+      description:
+        'Start every run with the capacitor half charged; it charges +25% faster and surges hit +25% harder',
       kind: 'notable',
       tier: 'legendary',
       branch: 'reactor',
@@ -648,6 +649,7 @@ function buildSkillNodes(): Array<SkillNode> {
       connections: [],
       effects: [
         { stat: 'capacitorStartPercent', amount: 50 },
+        { stat: 'capacitorChargePercent', amount: 25 },
         { stat: 'surgeDamagePercent', amount: 25 },
       ],
     },
@@ -755,6 +757,7 @@ export function buildStartingStats({
     luck: BASE_RUN_STATS.luck * (1 + valueOf('luckPercent') / 100),
     xpMultiplier: BASE_RUN_STATS.xpMultiplier * (1 + valueOf('xpPercent') / 100),
     hasCapacitor: valueOf('capacitorUnlockFlat') > 0,
+    passiveDustPerMinute: BASE_RUN_STATS.passiveDustPerMinute + valueOf('passivePerMinuteFlat'),
     capacitorChargeRate:
       BASE_RUN_STATS.capacitorChargeRate * (1 + valueOf('capacitorChargePercent') / 100),
     surgeDamageBonus: BASE_RUN_STATS.surgeDamageBonus + valueOf('surgeDamagePercent') / 100,
@@ -773,16 +776,6 @@ export function stardustMultiplierFrom({
 }): number {
   const totals = aggregateEffects({ unlockedNodeIds })
   return 1 + (totals.get('stardustPercent') ?? 0) / 100
-}
-
-/** stardust generated per real-world hour by the reactor's trickle cells */
-export function passiveStardustPerHourFrom({
-  unlockedNodeIds,
-}: {
-  unlockedNodeIds: Array<string>
-}): number {
-  const totals = aggregateEffects({ unlockedNodeIds })
-  return totals.get('passivePerHourFlat') ?? 0
 }
 
 /** interest rate (percent) paid on unspent stardust at the end of every run */

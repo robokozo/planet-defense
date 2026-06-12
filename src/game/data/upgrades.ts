@@ -173,7 +173,7 @@ export const UPGRADE_DEFINITIONS: Array<UpgradeDefinition> = [
   },
   {
     id: 'mines',
-    name: 'Mine Layer',
+    name: 'Balloon Mines',
     description:
       'Every cannon lobs balloon-tethered proximity mines into the sky, where they hang until something drifts too close (stacks: more mines per volley, bigger blasts)',
     rarity: 'rare',
