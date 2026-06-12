@@ -33,6 +33,10 @@ export const PATCH_NOTES: Array<PatchEntry> = [
         kind: 'new',
         text: 'The glossary is also browsable from the home screen, next to the patch notes.',
       },
+      {
+        kind: 'fix',
+        text: 'The paragon board breathes again: nodes are spread out so neighboring branches no longer overlap, and every unique node now has its own icon (🔩 Hardened Slugs, 🛡️ Aegis Protocol, 🏦 Compound Interest…) so you can read the board without hovering.',
+      },
     ],
   },
   {

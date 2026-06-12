@@ -49,6 +49,8 @@ export interface SkillNode {
   id: string
   name: string
   description: string
+  /** the node's own glyph on the board — every unique node has its own */
+  icon: string
   kind: SkillNodeKind
   /** card-style tier — drives the node's color on the board, like card rarity */
   tier: UpgradeRarity
@@ -107,25 +109,27 @@ interface SlotLayout {
 // price tiers track node power, not position: minors are pocket change so a
 // run always buys something, while keystones and expansions cost several
 // runs' worth of stardust — the real good nodes are earned, not stumbled into
+// radii and offsets sized for SEVEN branches at 51.4° — the tightest gap
+// (between adjacent branches' mid rings) stays ≥ ~100px so nothing overlaps
 const SLOT_LAYOUT: Record<SlotKey, SlotLayout> = {
-  entry: { radius: 115, angleOffsetDeg: 0, kind: 'minor', cost: 30 },
-  earlyA: { radius: 215, angleOffsetDeg: -20, kind: 'minor', cost: 40 },
-  earlyB: { radius: 215, angleOffsetDeg: 0, kind: 'minor', cost: 40 },
-  earlyC: { radius: 215, angleOffsetDeg: 20, kind: 'minor', cost: 40 },
-  midA: { radius: 320, angleOffsetDeg: -26, kind: 'minor', cost: 50 },
-  midB: { radius: 320, angleOffsetDeg: -9, kind: 'minor', cost: 50 },
-  midC: { radius: 320, angleOffsetDeg: 9, kind: 'minor', cost: 50 },
-  midD: { radius: 320, angleOffsetDeg: 26, kind: 'minor', cost: 50 },
-  notable: { radius: 430, angleOffsetDeg: 0, kind: 'notable', cost: 400 },
-  lateA: { radius: 540, angleOffsetDeg: -22, kind: 'minor', cost: 70 },
-  lateB: { radius: 540, angleOffsetDeg: 0, kind: 'minor', cost: 70 },
-  lateC: { radius: 540, angleOffsetDeg: 22, kind: 'minor', cost: 70 },
-  deepA: { radius: 650, angleOffsetDeg: -14, kind: 'minor', cost: 90 },
-  deepB: { radius: 650, angleOffsetDeg: 0, kind: 'minor', cost: 90 },
-  deepC: { radius: 650, angleOffsetDeg: 14, kind: 'minor', cost: 90 },
-  primeA: { radius: 745, angleOffsetDeg: -8, kind: 'minor', cost: 120 },
-  primeB: { radius: 745, angleOffsetDeg: 8, kind: 'minor', cost: 120 },
-  keystone: { radius: 840, angleOffsetDeg: 0, kind: 'keystone', cost: 2_000 },
+  entry: { radius: 130, angleOffsetDeg: 0, kind: 'minor', cost: 30 },
+  earlyA: { radius: 250, angleOffsetDeg: -16, kind: 'minor', cost: 40 },
+  earlyB: { radius: 250, angleOffsetDeg: 0, kind: 'minor', cost: 40 },
+  earlyC: { radius: 250, angleOffsetDeg: 16, kind: 'minor', cost: 40 },
+  midA: { radius: 375, angleOffsetDeg: -18, kind: 'minor', cost: 50 },
+  midB: { radius: 375, angleOffsetDeg: -6, kind: 'minor', cost: 50 },
+  midC: { radius: 375, angleOffsetDeg: 6, kind: 'minor', cost: 50 },
+  midD: { radius: 375, angleOffsetDeg: 18, kind: 'minor', cost: 50 },
+  notable: { radius: 500, angleOffsetDeg: 0, kind: 'notable', cost: 400 },
+  lateA: { radius: 625, angleOffsetDeg: -15, kind: 'minor', cost: 70 },
+  lateB: { radius: 625, angleOffsetDeg: 0, kind: 'minor', cost: 70 },
+  lateC: { radius: 625, angleOffsetDeg: 15, kind: 'minor', cost: 70 },
+  deepA: { radius: 750, angleOffsetDeg: -11, kind: 'minor', cost: 90 },
+  deepB: { radius: 750, angleOffsetDeg: 0, kind: 'minor', cost: 90 },
+  deepC: { radius: 750, angleOffsetDeg: 11, kind: 'minor', cost: 90 },
+  primeA: { radius: 860, angleOffsetDeg: -7, kind: 'minor', cost: 120 },
+  primeB: { radius: 860, angleOffsetDeg: 7, kind: 'minor', cost: 120 },
+  keystone: { radius: 965, angleOffsetDeg: 0, kind: 'keystone', cost: 2_000 },
 }
 
 const SLOT_CONNECTIONS: Record<SlotKey, Array<SlotKey>> = {
@@ -176,12 +180,14 @@ const ROMAN_NUMERALS = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII'] as con
 
 interface MinorTemplate {
   name: string
+  icon: string
   description: string
   effects: Array<SkillEffect>
 }
 
 interface SlotContent {
   name: string
+  icon: string
   description: string
   effects: Array<SkillEffect>
 }
@@ -201,17 +207,20 @@ const BRANCH_DEFINITIONS: Array<BranchDefinition> = [
     minors: {
       primary: {
         name: 'Hardened Slugs',
+        icon: '🔩',
         description: '+2% damage',
         effects: [{ stat: 'damagePercent', amount: 2 }],
       },
       secondary: {
         name: 'Targeting Optics',
+        icon: '🎯',
         description: '+1.5% critical chance',
         effects: [{ stat: 'critChancePercent', amount: 1.5 }],
       },
     },
     notable: {
       name: 'Heavy Rounds',
+      icon: '💥',
       description: '+10% damage, +4% critical chance',
       effects: [
         { stat: 'damagePercent', amount: 10 },
@@ -220,6 +229,7 @@ const BRANCH_DEFINITIONS: Array<BranchDefinition> = [
     },
     keystone: {
       name: 'Executioner',
+      icon: '☠️',
       description: 'Keystone: +25% damage and +15% critical chance',
       effects: [
         { stat: 'damagePercent', amount: 25 },
@@ -233,22 +243,26 @@ const BRANCH_DEFINITIONS: Array<BranchDefinition> = [
     minors: {
       primary: {
         name: 'Rifled Barrels',
+        icon: '🌀',
         description: '+2% projectile speed',
         effects: [{ stat: 'projectileSpeedPercent', amount: 2 }],
       },
       secondary: {
         name: 'Hollow Points',
+        icon: '🗡️',
         description: '+1.5% damage',
         effects: [{ stat: 'damagePercent', amount: 1.5 }],
       },
     },
     notable: {
       name: 'Tungsten Core',
+      icon: '📌',
       description: 'Projectiles pierce +1 invader',
       effects: [{ stat: 'pierceFlat', amount: 1 }],
     },
     keystone: {
       name: 'Autoloaders',
+      icon: '♻️',
       description: 'Keystone: automated loaders — every weapon system cycles 20% faster',
       effects: [{ stat: 'fireRatePercent', amount: 20 }],
     },
@@ -259,17 +273,20 @@ const BRANCH_DEFINITIONS: Array<BranchDefinition> = [
     minors: {
       primary: {
         name: 'Capacitor Banks',
+        icon: '⚡',
         description: '+2% fire rate',
         effects: [{ stat: 'fireRatePercent', amount: 2 }],
       },
       secondary: {
         name: 'Coil Windings',
+        icon: '🧲',
         description: '+2% projectile speed',
         effects: [{ stat: 'projectileSpeedPercent', amount: 2 }],
       },
     },
     notable: {
       name: 'Overclock',
+      icon: '⏩',
       description: '+8% fire rate, +8% projectile speed',
       effects: [
         { stat: 'fireRatePercent', amount: 8 },
@@ -278,6 +295,7 @@ const BRANCH_DEFINITIONS: Array<BranchDefinition> = [
     },
     keystone: {
       name: 'Overdrive Core',
+      icon: '💠',
       description: 'Keystone: critical strikes hit half again as hard (×3 damage instead of ×2)',
       effects: [{ stat: 'critMultiplierFlat', amount: 1 }],
     },
@@ -288,17 +306,20 @@ const BRANCH_DEFINITIONS: Array<BranchDefinition> = [
     minors: {
       primary: {
         name: 'Basalt Crust',
+        icon: '🪨',
         description: '+5 max integrity',
         effects: [{ stat: 'maxHpFlat', amount: 5 }],
       },
       secondary: {
         name: 'Self-Sealing Rock',
+        icon: '🩹',
         description: '+0.2 integrity regen per second',
         effects: [{ stat: 'regenPerSecondFlat', amount: 0.2 }],
       },
     },
     notable: {
       name: 'Bulwark',
+      icon: '🧱',
       description: '+40 max integrity, +1 integrity regen per second',
       effects: [
         { stat: 'maxHpFlat', amount: 40 },
@@ -307,6 +328,7 @@ const BRANCH_DEFINITIONS: Array<BranchDefinition> = [
     },
     keystone: {
       name: 'Aegis Protocol',
+      icon: '🛡️',
       description: 'Keystone: a planetary shield nullifies one invader impact every 12 seconds',
       effects: [{ stat: 'aegisUnlockFlat', amount: 1 }],
     },
@@ -317,17 +339,20 @@ const BRANCH_DEFINITIONS: Array<BranchDefinition> = [
     minors: {
       primary: {
         name: 'Wide-Band Radar',
+        icon: '📡',
         description: '+2% targeting range',
         effects: [{ stat: 'rangePercent', amount: 2 }],
       },
       secondary: {
         name: 'Spectral Lens',
+        icon: '🔍',
         description: '+1.5% critical chance',
         effects: [{ stat: 'critChancePercent', amount: 1.5 }],
       },
     },
     notable: {
       name: 'Deep-Field Scanner',
+      icon: '🔭',
       description: '+10% targeting range, +4% critical chance',
       effects: [
         { stat: 'rangePercent', amount: 10 },
@@ -336,6 +361,7 @@ const BRANCH_DEFINITIONS: Array<BranchDefinition> = [
     },
     keystone: {
       name: 'Farsight Protocol',
+      icon: '👁️',
       description: 'Keystone: +25% targeting range and projectiles pierce +1 invader',
       effects: [
         { stat: 'rangePercent', amount: 25 },
@@ -349,17 +375,20 @@ const BRANCH_DEFINITIONS: Array<BranchDefinition> = [
     minors: {
       primary: {
         name: 'Survey Probes',
+        icon: '🛰️',
         description: '+2.5% experience gained',
         effects: [{ stat: 'xpPercent', amount: 2.5 }],
       },
       secondary: {
         name: 'Salvage Rigs',
+        icon: '⛏️',
         description: '+3% stardust earned',
         effects: [{ stat: 'stardustPercent', amount: 3 }],
       },
     },
     notable: {
       name: 'Prospector',
+      icon: '💰',
       description: '+15% stardust earned, +10% odds of rarer cards',
       effects: [
         { stat: 'stardustPercent', amount: 15 },
@@ -368,6 +397,7 @@ const BRANCH_DEFINITIONS: Array<BranchDefinition> = [
     },
     keystone: {
       name: 'Star Harvest',
+      icon: '🌟',
       description: 'Keystone: +50% stardust, +20% experience, +15% odds of rarer cards',
       effects: [
         { stat: 'stardustPercent', amount: 50 },
@@ -382,22 +412,26 @@ const BRANCH_DEFINITIONS: Array<BranchDefinition> = [
     minors: {
       primary: {
         name: 'Dust Siphon',
+        icon: '🌫️',
         description: '+1 stardust generated per minute of battle',
         effects: [{ stat: 'passivePerMinuteFlat', amount: 1 }],
       },
       secondary: {
         name: 'Compound Cells',
+        icon: '🪙',
         description: '+0.5% interest on unspent stardust after every run',
         effects: [{ stat: 'interestPercentFlat', amount: 0.5 }],
       },
     },
     notable: {
       name: 'Compound Interest',
+      icon: '🏦',
       description: 'Unspent stardust earns +5% interest at the end of every run',
       effects: [{ stat: 'interestPercentFlat', amount: 5 }],
     },
     keystone: {
       name: 'Capacitor Array',
+      icon: '🔋',
       description:
         'Keystone: unlock the capacitor — kills charge a battery, and at full charge every weapon surges with bonus damage while it discharges',
       effects: [{ stat: 'capacitorUnlockFlat', amount: 1 }],
@@ -418,6 +452,7 @@ const UNIFORM_SLOT_OVERRIDES: Partial<
     cost: 250,
     content: {
       name: 'Tactical Reserve',
+      icon: '🔄',
       description: '+1 card reroll per run',
       effects: [{ stat: 'rerollFlat', amount: 1 }],
     },
@@ -427,6 +462,7 @@ const UNIFORM_SLOT_OVERRIDES: Partial<
     cost: 350,
     content: {
       name: 'Exclusion Protocol',
+      icon: '🚫',
       description: '+1 card banish per run — strike an offered card from the rest of the run',
       effects: [{ stat: 'banishFlat', amount: 1 }],
     },
@@ -498,6 +534,7 @@ function buildBranchNodes({ branch }: { branch: BranchDefinition }): Array<Skill
       templateCounts[templateKey] += 1
       content = {
         name: `${template.name} ${ROMAN_NUMERALS[templateCounts[templateKey] - 1]}`,
+        icon: template.icon,
         description: template.description,
         effects: template.effects,
       }
@@ -507,6 +544,7 @@ function buildBranchNodes({ branch }: { branch: BranchDefinition }): Array<Skill
       id: nodeIdFor({ branchId: branch.id, slot }),
       name: content.name,
       description: content.description,
+      icon: content.icon,
       kind,
       tier: TIER_BY_KIND[kind],
       branch: branch.id,
@@ -525,6 +563,7 @@ function buildSkillNodes(): Array<SkillNode> {
   const rootNode: SkillNode = {
     id: ROOT_NODE_ID,
     name: 'Planetary Core',
+    icon: '🌐',
     description: 'The heart of your world. All paths begin here.',
     kind: 'root',
     tier: 'common',
@@ -562,11 +601,12 @@ function buildSkillNodes(): Array<SkillNode> {
   }
 
   // expansion nodes: the deepest investments, one hanging beyond every keystone
-  const EXPANSION_RADIUS = 970
+  const EXPANSION_RADIUS = 1_100
   const expansionNodes: Array<SkillNode> = [
     {
       id: 'offense-expansion',
       name: 'Forward Battery',
+      icon: '🔫',
       description: '+1 cannon — start every run with an additional emplacement',
       kind: 'notable',
       tier: 'legendary',
@@ -579,6 +619,7 @@ function buildSkillNodes(): Array<SkillNode> {
     {
       id: 'arsenal-expansion',
       name: 'Ordnance Bay',
+      icon: '📦',
       description: '+1 weapon slot — carry an additional weapon type each run',
       kind: 'notable',
       tier: 'legendary',
@@ -591,6 +632,7 @@ function buildSkillNodes(): Array<SkillNode> {
     {
       id: 'tech-expansion',
       name: 'Prototype Lab',
+      icon: '🧪',
       description: '+1 maximum tier on every weapon card — keep ranking up past ★5',
       kind: 'notable',
       tier: 'legendary',
@@ -603,6 +645,7 @@ function buildSkillNodes(): Array<SkillNode> {
     {
       id: 'defense-expansion',
       name: 'Bastion Emplacement',
+      icon: '🏰',
       description: '+1 cannon — start every run with an additional emplacement',
       kind: 'notable',
       tier: 'legendary',
@@ -615,6 +658,7 @@ function buildSkillNodes(): Array<SkillNode> {
     {
       id: 'sensors-expansion',
       name: 'Modular Racks',
+      icon: '🗄️',
       description: '+1 weapon slot — carry an additional weapon type each run',
       kind: 'notable',
       tier: 'legendary',
@@ -627,6 +671,7 @@ function buildSkillNodes(): Array<SkillNode> {
     {
       id: 'fortune-expansion',
       name: 'Star Forge',
+      icon: '🔨',
       description: '+1 maximum tier on every weapon card — keep ranking up past ★5',
       kind: 'notable',
       tier: 'legendary',
@@ -639,6 +684,7 @@ function buildSkillNodes(): Array<SkillNode> {
     {
       id: 'reactor-expansion',
       name: 'Overcharge Core',
+      icon: '☢️',
       description:
         'Start every run with the capacitor half charged; it charges +25% faster and surges hit +25% harder',
       kind: 'notable',

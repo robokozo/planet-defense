@@ -14,13 +14,13 @@ const metaStore = useMetaStore()
 
 const VIEW_BASE_WIDTH = 1500
 const VIEW_BASE_HEIGHT = 1000
-const ZOOM_MIN = 0.4
+const ZOOM_MIN = 0.32
 const ZOOM_MAX = 2.2
 const ZOOM_STEP = 1.12
 
 const cameraX = ref(0)
 const cameraY = ref(0)
-const zoom = ref(0.6)
+const zoom = ref(0.42)
 const selectedNodeId = ref<string | null>(null)
 const isConfirmingReset = ref(false)
 
@@ -77,18 +77,6 @@ const BRANCH_COLORS: Record<SkillNode['branch'], string> = {
   sensors: '#a78bfa',
   fortune: '#fbbf24',
   reactor: '#f472b6',
-}
-
-/** family glyph drawn inside every node */
-const BRANCH_ICONS: Record<SkillNode['branch'], string> = {
-  core: '🌐',
-  offense: '⚔️',
-  arsenal: '🧰',
-  tech: '⚙️',
-  defense: '🛡️',
-  sensors: '📡',
-  fortune: '🎲',
-  reactor: '🔋',
 }
 
 /** node color = tier, matching the card rarity palette */
@@ -418,7 +406,7 @@ function nodeOpacity({ node }: { node: SkillNode }): number {
             class="pointer-events-none select-none"
             :font-size="Math.round(NODE_RADII[node.kind] * 1.05)"
           >
-            {{ BRANCH_ICONS[node.branch] }}
+            {{ node.icon }}
           </text>
           <text
             :x="node.x"
@@ -441,7 +429,7 @@ function nodeOpacity({ node }: { node: SkillNode }): number {
       >
         <div class="flex items-center justify-between gap-2">
           <p class="font-bold" :style="{ color: BRANCH_COLORS[hoveredNode.branch] }">
-            {{ BRANCH_ICONS[hoveredNode.branch] }} {{ hoveredNode.name }}
+            {{ hoveredNode.icon }} {{ hoveredNode.name }}
           </p>
           <span
             class="rounded bg-slate-800 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider"
@@ -479,7 +467,7 @@ function nodeOpacity({ node }: { node: SkillNode }): number {
       >
         <div class="flex items-center justify-between">
           <h2 class="text-lg font-bold" :style="{ color: BRANCH_COLORS[selectedNode.branch] }">
-            {{ BRANCH_ICONS[selectedNode.branch] }} {{ selectedNode.name }}
+            {{ selectedNode.icon }} {{ selectedNode.name }}
           </h2>
           <span
             class="rounded bg-slate-800 px-2 py-0.5 text-xs font-bold uppercase tracking-wider"
