@@ -23,5 +23,10 @@ export const router = createRouter({
       name: 'lab',
       component: () => import('@/views/LabView.vue'),
     },
+    {
+      path: '/patch-notes',
+      name: 'patch-notes',
+      component: () => import('@/views/PatchNotesView.vue'),
+    },
   ],
 })

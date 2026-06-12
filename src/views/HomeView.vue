@@ -127,13 +127,21 @@ function onImportSave(): void {
     </section>
 
     <section class="flex w-full max-w-md flex-col items-center gap-3">
-      <button
-        type="button"
-        class="cursor-pointer text-xs font-semibold text-slate-500 transition hover:text-slate-300"
-        @click="isSettingsOpen = isSettingsOpen === false"
-      >
-        ⚙ Settings &amp; save {{ isSettingsOpen === true ? '▴' : '▾' }}
-      </button>
+      <div class="flex items-center gap-5">
+        <button
+          type="button"
+          class="cursor-pointer text-xs font-semibold text-slate-500 transition hover:text-slate-300"
+          @click="isSettingsOpen = isSettingsOpen === false"
+        >
+          ⚙ Settings &amp; save {{ isSettingsOpen === true ? '▴' : '▾' }}
+        </button>
+        <RouterLink
+          to="/patch-notes"
+          class="text-xs font-semibold text-slate-500 transition hover:text-slate-300"
+        >
+          📜 Patch notes
+        </RouterLink>
+      </div>
 
       <div
         v-if="isSettingsOpen === true"
