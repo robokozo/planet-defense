@@ -23,11 +23,15 @@ export const PATCH_NOTES: Array<PatchEntry> = [
   {
     date: '2026-06-12',
     title: 'Sticker Shock',
-    blurb: 'Simpler prices, same grind.',
+    blurb: 'Prices now match power.',
     notes: [
       {
         kind: 'balance',
-        text: 'Paragon node prices no longer creep up with every point you buy — instead, every node simply costs four times more. The total cost of the board is about the same, but what you see is what you pay. Tree resets still refund exactly what you spent.',
+        text: 'Paragon node prices no longer creep up with every point you buy — what you see is what you pay, and the price now reflects the node, not when you bought it. Minors stay pocket change, notables cost about a good run, and the truly powerful nodes are a project: keystones run ✦2000 and the expansion nodes beyond them ✦3200–4000, several runs of stardust each. Tree resets still refund exactly what you spent.',
+      },
+      {
+        kind: 'new',
+        text: 'Paragon nodes now show their tier like cards do — node color matches card rarity (common, rare, epic, legendary) and an icon inside each node marks its family (⚔️ offense, 🧰 arsenal, ⚙️ tech, 🛡️ defense, 📡 sensors, 🎲 fortune).',
       },
     ],
   },

@@ -1,5 +1,5 @@
 import { AEGIS_BLOCK_INTERVAL_MS, BASE_RUN_STATS, PRESTIGE } from '@/game/data/balance'
-import type { RunStats } from '@/game/types'
+import type { RunStats, UpgradeRarity } from '@/game/types'
 
 export type SkillNodeKind = 'root' | 'minor' | 'notable' | 'keystone'
 
@@ -42,6 +42,8 @@ export interface SkillNode {
   name: string
   description: string
   kind: SkillNodeKind
+  /** card-style tier — drives the node's color on the board, like card rarity */
+  tier: UpgradeRarity
   branch: SkillBranch
   cost: number
   x: number
@@ -53,8 +55,13 @@ export interface SkillNode {
 
 export const ROOT_NODE_ID = 'core'
 
-/** the whole board's grind in one number — multiplies every node's base cost */
-const NODE_COST_SCALE = 4
+/** expansions override this to legendary — they're the board's chase nodes */
+const TIER_BY_KIND: Record<SkillNodeKind, UpgradeRarity> = {
+  root: 'common',
+  minor: 'common',
+  notable: 'rare',
+  keystone: 'epic',
+}
 
 // ── rotationally symmetric layout ─────────────────────────────────────
 // Six branches at 60° intervals share one slot geometry; only the content
@@ -89,25 +96,28 @@ interface SlotLayout {
   cost: number
 }
 
+// price tiers track node power, not position: minors are pocket change so a
+// run always buys something, while keystones and expansions cost several
+// runs' worth of stardust — the real good nodes are earned, not stumbled into
 const SLOT_LAYOUT: Record<SlotKey, SlotLayout> = {
-  entry: { radius: 115, angleOffsetDeg: 0, kind: 'minor', cost: 8 },
-  earlyA: { radius: 215, angleOffsetDeg: -20, kind: 'minor', cost: 10 },
-  earlyB: { radius: 215, angleOffsetDeg: 0, kind: 'minor', cost: 10 },
-  earlyC: { radius: 215, angleOffsetDeg: 20, kind: 'minor', cost: 10 },
-  midA: { radius: 320, angleOffsetDeg: -26, kind: 'minor', cost: 12 },
-  midB: { radius: 320, angleOffsetDeg: -9, kind: 'minor', cost: 12 },
-  midC: { radius: 320, angleOffsetDeg: 9, kind: 'minor', cost: 12 },
-  midD: { radius: 320, angleOffsetDeg: 26, kind: 'minor', cost: 12 },
-  notable: { radius: 430, angleOffsetDeg: 0, kind: 'notable', cost: 50 },
-  lateA: { radius: 540, angleOffsetDeg: -22, kind: 'minor', cost: 16 },
-  lateB: { radius: 540, angleOffsetDeg: 0, kind: 'minor', cost: 16 },
-  lateC: { radius: 540, angleOffsetDeg: 22, kind: 'minor', cost: 16 },
-  deepA: { radius: 650, angleOffsetDeg: -14, kind: 'minor', cost: 22 },
-  deepB: { radius: 650, angleOffsetDeg: 0, kind: 'minor', cost: 22 },
-  deepC: { radius: 650, angleOffsetDeg: 14, kind: 'minor', cost: 22 },
-  primeA: { radius: 745, angleOffsetDeg: -8, kind: 'minor', cost: 30 },
-  primeB: { radius: 745, angleOffsetDeg: 8, kind: 'minor', cost: 30 },
-  keystone: { radius: 840, angleOffsetDeg: 0, kind: 'keystone', cost: 180 },
+  entry: { radius: 115, angleOffsetDeg: 0, kind: 'minor', cost: 30 },
+  earlyA: { radius: 215, angleOffsetDeg: -20, kind: 'minor', cost: 40 },
+  earlyB: { radius: 215, angleOffsetDeg: 0, kind: 'minor', cost: 40 },
+  earlyC: { radius: 215, angleOffsetDeg: 20, kind: 'minor', cost: 40 },
+  midA: { radius: 320, angleOffsetDeg: -26, kind: 'minor', cost: 50 },
+  midB: { radius: 320, angleOffsetDeg: -9, kind: 'minor', cost: 50 },
+  midC: { radius: 320, angleOffsetDeg: 9, kind: 'minor', cost: 50 },
+  midD: { radius: 320, angleOffsetDeg: 26, kind: 'minor', cost: 50 },
+  notable: { radius: 430, angleOffsetDeg: 0, kind: 'notable', cost: 400 },
+  lateA: { radius: 540, angleOffsetDeg: -22, kind: 'minor', cost: 70 },
+  lateB: { radius: 540, angleOffsetDeg: 0, kind: 'minor', cost: 70 },
+  lateC: { radius: 540, angleOffsetDeg: 22, kind: 'minor', cost: 70 },
+  deepA: { radius: 650, angleOffsetDeg: -14, kind: 'minor', cost: 90 },
+  deepB: { radius: 650, angleOffsetDeg: 0, kind: 'minor', cost: 90 },
+  deepC: { radius: 650, angleOffsetDeg: 14, kind: 'minor', cost: 90 },
+  primeA: { radius: 745, angleOffsetDeg: -8, kind: 'minor', cost: 120 },
+  primeB: { radius: 745, angleOffsetDeg: 8, kind: 'minor', cost: 120 },
+  keystone: { radius: 840, angleOffsetDeg: 0, kind: 'keystone', cost: 2_000 },
 }
 
 const SLOT_CONNECTIONS: Record<SlotKey, Array<SlotKey>> = {
@@ -370,7 +380,7 @@ const UNIFORM_SLOT_OVERRIDES: Partial<
 > = {
   midD: {
     kind: 'notable',
-    cost: 40,
+    cost: 250,
     content: {
       name: 'Tactical Reserve',
       description: '+1 card reroll per run',
@@ -379,7 +389,7 @@ const UNIFORM_SLOT_OVERRIDES: Partial<
   },
   deepC: {
     kind: 'notable',
-    cost: 50,
+    cost: 350,
     content: {
       name: 'Exclusion Protocol',
       description: '+1 card banish per run — strike an offered card from the rest of the run',
@@ -463,6 +473,7 @@ function buildBranchNodes({ branch }: { branch: BranchDefinition }): Array<Skill
       name: content.name,
       description: content.description,
       kind,
+      tier: TIER_BY_KIND[kind],
       branch: branch.id,
       cost,
       x,
@@ -481,6 +492,7 @@ function buildSkillNodes(): Array<SkillNode> {
     name: 'Planetary Core',
     description: 'The heart of your world. All paths begin here.',
     kind: 'root',
+    tier: 'common',
     branch: 'core',
     cost: 0,
     x: 0,
@@ -522,8 +534,9 @@ function buildSkillNodes(): Array<SkillNode> {
       name: 'Forward Battery',
       description: '+1 cannon — start every run with an additional emplacement',
       kind: 'notable',
+      tier: 'legendary',
       branch: 'offense',
-      cost: 250,
+      cost: 4_000,
       ...polarPoint({ radius: EXPANSION_RADIUS, angleDeg: 0 }),
       connections: [],
       effects: [{ stat: 'cannonFlat', amount: 1 }],
@@ -533,8 +546,9 @@ function buildSkillNodes(): Array<SkillNode> {
       name: 'Ordnance Bay',
       description: '+1 weapon slot — carry an additional weapon type each run',
       kind: 'notable',
+      tier: 'legendary',
       branch: 'arsenal',
-      cost: 220,
+      cost: 3_200,
       ...polarPoint({ radius: EXPANSION_RADIUS, angleDeg: 60 }),
       connections: [],
       effects: [{ stat: 'weaponSlotFlat', amount: 1 }],
@@ -544,8 +558,9 @@ function buildSkillNodes(): Array<SkillNode> {
       name: 'Prototype Lab',
       description: '+1 maximum tier on every weapon card — keep ranking up past ★5',
       kind: 'notable',
+      tier: 'legendary',
       branch: 'tech',
-      cost: 240,
+      cost: 3_600,
       ...polarPoint({ radius: EXPANSION_RADIUS, angleDeg: 120 }),
       connections: [],
       effects: [{ stat: 'weaponTierFlat', amount: 1 }],
@@ -555,8 +570,9 @@ function buildSkillNodes(): Array<SkillNode> {
       name: 'Bastion Emplacement',
       description: '+1 cannon — start every run with an additional emplacement',
       kind: 'notable',
+      tier: 'legendary',
       branch: 'defense',
-      cost: 250,
+      cost: 4_000,
       ...polarPoint({ radius: EXPANSION_RADIUS, angleDeg: 180 }),
       connections: [],
       effects: [{ stat: 'cannonFlat', amount: 1 }],
@@ -566,8 +582,9 @@ function buildSkillNodes(): Array<SkillNode> {
       name: 'Modular Racks',
       description: '+1 weapon slot — carry an additional weapon type each run',
       kind: 'notable',
+      tier: 'legendary',
       branch: 'sensors',
-      cost: 220,
+      cost: 3_200,
       ...polarPoint({ radius: EXPANSION_RADIUS, angleDeg: 240 }),
       connections: [],
       effects: [{ stat: 'weaponSlotFlat', amount: 1 }],
@@ -577,8 +594,9 @@ function buildSkillNodes(): Array<SkillNode> {
       name: 'Star Forge',
       description: '+1 maximum tier on every weapon card — keep ranking up past ★5',
       kind: 'notable',
+      tier: 'legendary',
       branch: 'fortune',
-      cost: 240,
+      cost: 3_600,
       ...polarPoint({ radius: EXPANSION_RADIUS, angleDeg: 300 }),
       connections: [],
       effects: [{ stat: 'weaponTierFlat', amount: 1 }],
@@ -593,12 +611,7 @@ function buildSkillNodes(): Array<SkillNode> {
     }
   }
 
-  // one knob for the whole grind: every node's sticker price is scaled here
-  // (replaces the old per-point cost multiplier with flat, honest prices)
-  return [rootNode, ...branchNodes, ...expansionNodes].map((node) => ({
-    ...node,
-    cost: node.cost * NODE_COST_SCALE,
-  }))
+  return [rootNode, ...branchNodes, ...expansionNodes]
 }
 
 export const SKILL_NODES: Array<SkillNode> = buildSkillNodes()

@@ -78,6 +78,32 @@ const BRANCH_COLORS: Record<SkillNode['branch'], string> = {
   fortune: '#fbbf24',
 }
 
+/** family glyph drawn inside every node */
+const BRANCH_ICONS: Record<SkillNode['branch'], string> = {
+  core: '🌐',
+  offense: '⚔️',
+  arsenal: '🧰',
+  tech: '⚙️',
+  defense: '🛡️',
+  sensors: '📡',
+  fortune: '🎲',
+}
+
+/** node color = tier, matching the card rarity palette */
+const TIER_COLORS: Record<SkillNode['tier'], string> = {
+  common: '#94a3b8',
+  rare: '#38bdf8',
+  epic: '#e879f9',
+  legendary: '#fb923c',
+}
+
+const TIER_LABEL_CLASSES: Record<SkillNode['tier'], string> = {
+  common: 'text-slate-400',
+  rare: 'text-sky-300',
+  epic: 'text-fuchsia-300',
+  legendary: 'text-orange-300',
+}
+
 type NodeState = 'unlocked' | 'available' | 'locked'
 
 function stateOf({ nodeId }: { nodeId: string }): NodeState {
@@ -256,7 +282,7 @@ function edgeOpacity({ fromId, toId }: { fromId: string; toId: string }): number
 function nodeFill({ node }: { node: SkillNode }): string {
   const state = stateOf({ nodeId: node.id })
   if (state === 'unlocked') {
-    return BRANCH_COLORS[node.branch]
+    return TIER_COLORS[node.tier]
   }
   return '#0f172a'
 }
@@ -266,7 +292,7 @@ function nodeStroke({ node }: { node: SkillNode }): string {
   if (state === 'locked') {
     return '#334155'
   }
-  return BRANCH_COLORS[node.branch]
+  return TIER_COLORS[node.tier]
 }
 
 function nodeOpacity({ node }: { node: SkillNode }): number {
@@ -384,6 +410,16 @@ function nodeOpacity({ node }: { node: SkillNode }): number {
           />
           <text
             :x="node.x"
+            :y="node.y + 1"
+            text-anchor="middle"
+            dominant-baseline="central"
+            class="pointer-events-none select-none"
+            :font-size="Math.round(NODE_RADII[node.kind] * 1.05)"
+          >
+            {{ BRANCH_ICONS[node.branch] }}
+          </text>
+          <text
+            :x="node.x"
             :y="node.y + NODE_RADII[node.kind] + 18"
             text-anchor="middle"
             class="pointer-events-none select-none"
@@ -403,12 +439,13 @@ function nodeOpacity({ node }: { node: SkillNode }): number {
       >
         <div class="flex items-center justify-between gap-2">
           <p class="font-bold" :style="{ color: BRANCH_COLORS[hoveredNode.branch] }">
-            {{ hoveredNode.name }}
+            {{ BRANCH_ICONS[hoveredNode.branch] }} {{ hoveredNode.name }}
           </p>
           <span
-            class="rounded bg-slate-800 px-1.5 py-0.5 text-[10px] uppercase tracking-wider text-slate-400"
+            class="rounded bg-slate-800 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider"
+            :class="TIER_LABEL_CLASSES[hoveredNode.tier]"
           >
-            {{ hoveredNode.kind }}
+            {{ hoveredNode.tier }} {{ hoveredNode.kind }}
           </span>
         </div>
         <p class="mt-1.5 text-sm text-slate-300">{{ hoveredNode.description }}</p>
@@ -440,12 +477,13 @@ function nodeOpacity({ node }: { node: SkillNode }): number {
       >
         <div class="flex items-center justify-between">
           <h2 class="text-lg font-bold" :style="{ color: BRANCH_COLORS[selectedNode.branch] }">
-            {{ selectedNode.name }}
+            {{ BRANCH_ICONS[selectedNode.branch] }} {{ selectedNode.name }}
           </h2>
           <span
-            class="rounded bg-slate-800 px-2 py-0.5 text-xs uppercase tracking-wider text-slate-400"
+            class="rounded bg-slate-800 px-2 py-0.5 text-xs font-bold uppercase tracking-wider"
+            :class="TIER_LABEL_CLASSES[selectedNode.tier]"
           >
-            {{ selectedNode.kind }}
+            {{ selectedNode.tier }} {{ selectedNode.kind }}
           </span>
         </div>
         <p class="text-sm text-slate-300">{{ selectedNode.description }}</p>
