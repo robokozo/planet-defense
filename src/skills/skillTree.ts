@@ -53,6 +53,9 @@ export interface SkillNode {
 
 export const ROOT_NODE_ID = 'core'
 
+/** the whole board's grind in one number — multiplies every node's base cost */
+const NODE_COST_SCALE = 4
+
 // ── rotationally symmetric layout ─────────────────────────────────────
 // Six branches at 60° intervals share one slot geometry; only the content
 // differs per branch. Minors come in many small increments. Two rings link
@@ -590,7 +593,12 @@ function buildSkillNodes(): Array<SkillNode> {
     }
   }
 
-  return [rootNode, ...branchNodes, ...expansionNodes]
+  // one knob for the whole grind: every node's sticker price is scaled here
+  // (replaces the old per-point cost multiplier with flat, honest prices)
+  return [rootNode, ...branchNodes, ...expansionNodes].map((node) => ({
+    ...node,
+    cost: node.cost * NODE_COST_SCALE,
+  }))
 }
 
 export const SKILL_NODES: Array<SkillNode> = buildSkillNodes()
@@ -603,23 +611,6 @@ export const SKILL_NODES_BY_ID: Map<string, SkillNode> = new Map(
 export const SKILL_EDGES: Array<[string, string]> = SKILL_NODES.flatMap((node) =>
   node.connections.map((targetId): [string, string] => [node.id, targetId]),
 )
-
-// ── paragon level ─────────────────────────────────────────────────────
-// Every point bought raises the price of all future nodes, so the tree
-// gets grindier the deeper you are without touching stardust income.
-
-/** +5% on every node's base cost per point already bought */
-export const PARAGON_COST_GROWTH_PER_LEVEL = 0.05
-
-export function scaledNodeCost({
-  baseCost,
-  paragonLevel,
-}: {
-  baseCost: number
-  paragonLevel: number
-}): number {
-  return Math.ceil(baseCost * (1 + PARAGON_COST_GROWTH_PER_LEVEL * paragonLevel))
-}
 
 export function listAdjacentNodeIds({ nodeId }: { nodeId: string }): Array<string> {
   const adjacent = new Set<string>()

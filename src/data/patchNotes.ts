@@ -22,6 +22,17 @@ export interface PatchEntry {
 export const PATCH_NOTES: Array<PatchEntry> = [
   {
     date: '2026-06-12',
+    title: 'Sticker Shock',
+    blurb: 'Simpler prices, same grind.',
+    notes: [
+      {
+        kind: 'balance',
+        text: 'Paragon node prices no longer creep up with every point you buy — instead, every node simply costs four times more. The total cost of the board is about the same, but what you see is what you pay. Tree resets still refund exactly what you spent.',
+      },
+    ],
+  },
+  {
+    date: '2026-06-12',
     title: 'The Bigger Picture',
     blurb: 'Complete the paragon board and see how wide the war really is.',
     notes: [

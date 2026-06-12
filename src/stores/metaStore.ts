@@ -8,7 +8,6 @@ import {
   SKILL_NODES,
   SKILL_NODES_BY_ID,
   listAdjacentNodeIds,
-  scaledNodeCost,
 } from '@/skills/skillTree'
 
 interface LifetimeStats {
@@ -53,16 +52,12 @@ export const useMetaStore = defineStore('meta', () => {
 
   const unlockedNodeIdSet = computed(() => new Set(unlockedNodeIds.value))
 
-  /** points bought so far (the free root doesn't count) — drives cost scaling */
+  /** points bought so far (the free root doesn't count) — board progress */
   const paragonLevel = computed(() => Math.max(0, unlockedNodeIds.value.length - 1))
 
-  /** what a node costs right now, at the current paragon level */
+  /** node prices are flat — this stays the single lookup the UI and unlocks share */
   function nodeCostOf({ nodeId }: { nodeId: string }): number {
-    const node = SKILL_NODES_BY_ID.get(nodeId)
-    if (node === undefined) {
-      return 0
-    }
-    return scaledNodeCost({ baseCost: node.cost, paragonLevel: paragonLevel.value })
+    return SKILL_NODES_BY_ID.get(nodeId)?.cost ?? 0
   }
 
   const availableNodeIdSet = computed(() => {
