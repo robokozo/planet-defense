@@ -63,6 +63,8 @@ export const CAPACITOR = {
   chargePerKill: 0.02,
   /** bosses dump a chunk of charge on death */
   bossKillBonus: 0.2,
+  /** while surging, every weapon's reload is multiplied by this — the surge is a burst window */
+  surgeCooldownFactor: 0.6,
 } as const
 
 export const NOVA = {

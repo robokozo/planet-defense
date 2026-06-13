@@ -934,9 +934,10 @@ export class GameScene extends Phaser.Scene {
     if (this.isSandbox === true && this.sandboxLayout.isMainGunEnabled === false) {
       return
     }
+    const fireInterval = this.mainFireIntervalMs()
     for (const cannon of this.cannons) {
       cannon.fireAccumulatorMs += delta
-      if (cannon.fireAccumulatorMs < this.stats.fireIntervalMs) {
+      if (cannon.fireAccumulatorMs < fireInterval) {
         continue
       }
       const targets = this.findMostUrgentEnemiesInRange({
@@ -945,11 +946,11 @@ export class GameScene extends Phaser.Scene {
         count: this.stats.projectileCount,
       })
       if (targets.length === 0) {
-        cannon.fireAccumulatorMs = this.stats.fireIntervalMs
+        cannon.fireAccumulatorMs = fireInterval
         continue
       }
-      while (cannon.fireAccumulatorMs >= this.stats.fireIntervalMs) {
-        cannon.fireAccumulatorMs -= this.stats.fireIntervalMs
+      while (cannon.fireAccumulatorMs >= fireInterval) {
+        cannon.fireAccumulatorMs -= fireInterval
         this.fireVolley({ cannon, targets })
       }
     }
@@ -2703,13 +2704,23 @@ export class GameScene extends Phaser.Scene {
     return weaponIds.sort((a, b) => a.localeCompare(b))
   }
 
+  /** while a surge burns, every weapon reloads faster — a burst window on top of the damage bonus */
+  private surgeCooldownFactor(): number {
+    return this.surgeRemainingMs > 0 ? CAPACITOR.surgeCooldownFactor : 1
+  }
+
+  /** the main cannons' effective fire interval, hastened while surging */
+  private mainFireIntervalMs(): number {
+    return this.stats.fireIntervalMs * this.surgeCooldownFactor()
+  }
+
   private weaponIntervalMs({ weaponId }: { weaponId: string }): number {
     const base = this.baseWeaponIntervalMs({ weaponId })
     // the aegis shield is defensive, not a weapon system — autoloaders skip it
     if (weaponId === 'aegis') {
       return base
     }
-    return base * this.stats.weaponCooldownFactor
+    return base * this.stats.weaponCooldownFactor * this.surgeCooldownFactor()
   }
 
   private baseWeaponIntervalMs({ weaponId }: { weaponId: string }): number {
@@ -4165,10 +4176,11 @@ export class GameScene extends Phaser.Scene {
       return
     }
     this.stormAccumulatorMs += delta
-    const interval = Math.max(
-      STORM_FRONT.minIntervalMs,
-      STORM_FRONT.baseIntervalMs - STORM_FRONT.intervalStepMs * (this.stats.stormLevel - 1),
-    )
+    const interval =
+      Math.max(
+        STORM_FRONT.minIntervalMs,
+        STORM_FRONT.baseIntervalMs - STORM_FRONT.intervalStepMs * (this.stats.stormLevel - 1),
+      ) * this.surgeCooldownFactor()
     if (this.stormAccumulatorMs < interval) {
       return
     }
@@ -4467,7 +4479,7 @@ export class GameScene extends Phaser.Scene {
         {
           key: `main-${cannonIndex}`,
           weaponId: 'main',
-          fraction: cannon.fireAccumulatorMs / this.stats.fireIntervalMs,
+          fraction: cannon.fireAccumulatorMs / this.mainFireIntervalMs(),
         },
         ...perCannonWeaponIds.map((weaponId) => ({
           key: `${weaponId}-${cannonIndex}`,

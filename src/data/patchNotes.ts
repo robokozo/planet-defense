@@ -27,15 +27,19 @@ export const PATCH_NOTES: Array<PatchEntry> = [
     notes: [
       {
         kind: 'new',
-        text: 'Save transfer by QR code: show a QR on one device and point another device’s camera (phone or webcam) at it to copy your whole save across — no more typing a long code to move between PC and mobile.',
+        text: 'Save transfer by QR code: show a QR on one device and point another device’s camera (phone or webcam) at it to copy your progress across — no more typing a long code to move between PC and mobile. (Carries your stardust and paragon tree; per-device extras like lifetime stats stay put.)',
       },
       {
         kind: 'new',
         text: 'The home screen now tracks your favorite weapons — the cards you pick most, tallied across every run.',
       },
       {
+        kind: 'new',
+        text: 'A live loadout panel during a run lists every card you’ve picked and its tier, down the left edge.',
+      },
+      {
         kind: 'balance',
-        text: 'Capacitor surges last twice as long (12s base, up from 6s).',
+        text: 'Capacitor surges last twice as long (12s base, up from 6s) and now also slash every weapon’s reload by 40% while they burn — a real burst window on top of the damage bonus.',
       },
       {
         kind: 'balance',

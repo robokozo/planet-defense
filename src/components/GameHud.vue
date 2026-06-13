@@ -1,9 +1,43 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 
-import type { HudSnapshot } from '@/game/types'
+import { findUpgradeDefinition } from '@/game/data/upgrades'
+import type { HudSnapshot, UpgradeRarity } from '@/game/types'
 
 const { hud } = defineProps<{ hud: HudSnapshot }>()
+
+const RARITY_CHIP_CLASSES: Record<UpgradeRarity, string> = {
+  common: 'border-slate-600/70 text-slate-200',
+  rare: 'border-sky-400/60 text-sky-200',
+  epic: 'border-fuchsia-400/60 text-fuchsia-200',
+  legendary: 'border-orange-400/70 text-orange-200',
+}
+
+/** the run's current loadout from card stacks — weapons first, then synergy tactics */
+const selectedCards = computed(() => {
+  return Object.entries(hud.cardStacks)
+    .map(([id, stacks]) => {
+      const definition = findUpgradeDefinition({ upgradeId: id })
+      if (definition === null) {
+        return null
+      }
+      return {
+        id,
+        name: definition.name,
+        rarity: definition.rarity,
+        category: definition.category,
+        stacks,
+      }
+    })
+    .filter((card): card is NonNullable<typeof card> => card !== null && card.stacks > 0)
+    .sort((a, b) => {
+      // weapons (the core kit) ahead of tactics; otherwise keep acquisition order
+      if (a.category !== b.category) {
+        return a.category === 'weapon' ? -1 : 1
+      }
+      return 0
+    })
+})
 
 const hpPercent = computed(() => {
   if (hud.maxHp <= 0) {
@@ -88,6 +122,24 @@ const elapsedLabel = computed(() => {
           :style="{ width: `${Math.max(0, (hud.boss.hp / hud.boss.maxHp) * 100)}%` }"
         />
       </div>
+    </div>
+  </div>
+
+  <!-- the run's loadout: every card picked so far, with its tier. Pinned to the
+       left edge clear of the centered bars and the cannons along the ground. -->
+  <div
+    v-if="selectedCards.length > 0"
+    class="pointer-events-none absolute left-2 top-1/3 flex max-w-[44%] flex-col gap-1 sm:left-4"
+  >
+    <span class="text-[9px] font-bold uppercase tracking-widest text-slate-500">Loadout</span>
+    <div
+      v-for="card in selectedCards"
+      :key="card.id"
+      class="flex w-fit items-center gap-1.5 rounded-md border bg-slate-900/70 px-1.5 py-0.5"
+      :class="RARITY_CHIP_CLASSES[card.rarity]"
+    >
+      <span class="text-[10px] font-semibold leading-none">{{ card.name }}</span>
+      <span class="text-[9px] font-bold leading-none text-amber-300">★{{ card.stacks }}</span>
     </div>
   </div>
 </template>

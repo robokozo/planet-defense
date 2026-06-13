@@ -157,7 +157,12 @@ export const useMetaStore = defineStore('meta', () => {
     weaponPicks.value = {}
   }
 
-  /** the whole save as a copyable code (base64 JSON) for moving between devices */
+  /**
+   * A copyable code for moving progress between devices. It carries only the
+   * progression that matters — stardust and the paragon tree (with its spend and
+   * prestige). Device-local extras like lifetime stats and favorite weapons are
+   * deliberately left out, so a transfer doesn't clobber the destination's history.
+   */
   function exportSave(): string {
     const payload = {
       version: 1,
@@ -165,28 +170,22 @@ export const useMetaStore = defineStore('meta', () => {
       unlockedNodeIds: unlockedNodeIds.value,
       treeSpent: treeSpent.value,
       prestigeLevel: prestigeLevel.value,
-      lifetime: lifetime.value,
-      weaponPicks: weaponPicks.value,
     }
     return btoa(JSON.stringify(payload))
   }
 
   function importSave({ code }: { code: string }): boolean {
     try {
+      // older codes may also carry lifetime/weaponPicks; we simply ignore them now,
+      // leaving this device's own stats and favorites untouched
       const payload = JSON.parse(atob(code.trim())) as {
         version?: number
         stardust?: number
         unlockedNodeIds?: Array<string>
         treeSpent?: number
         prestigeLevel?: number
-        lifetime?: LifetimeStats
-        weaponPicks?: Record<string, number>
       }
-      if (
-        typeof payload.stardust !== 'number' ||
-        Array.isArray(payload.unlockedNodeIds) === false ||
-        payload.lifetime === undefined
-      ) {
+      if (typeof payload.stardust !== 'number' || Array.isArray(payload.unlockedNodeIds) === false) {
         return false
       }
       stardust.value = payload.stardust
@@ -206,22 +205,6 @@ export const useMetaStore = defineStore('meta', () => {
               0,
             )
       prestigeLevel.value = typeof payload.prestigeLevel === 'number' ? payload.prestigeLevel : 0
-      lifetime.value = {
-        runs: Number(payload.lifetime.runs ?? 0),
-        kills: Number(payload.lifetime.kills ?? 0),
-        bestWave: Number(payload.lifetime.bestWave ?? 0),
-        totalStardustEarned: Number(payload.lifetime.totalStardustEarned ?? 0),
-      }
-      // older codes carry no favorites — keep whatever this device already tallied
-      if (payload.weaponPicks !== undefined && payload.weaponPicks !== null) {
-        const imported: Record<string, number> = {}
-        for (const [id, count] of Object.entries(payload.weaponPicks)) {
-          if (typeof count === 'number' && Number.isFinite(count) && count > 0) {
-            imported[id] = Math.floor(count)
-          }
-        }
-        weaponPicks.value = imported
-      }
       return true
     } catch {
       return false
