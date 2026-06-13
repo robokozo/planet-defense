@@ -37,6 +37,10 @@ export const PATCH_NOTES: Array<PatchEntry> = [
         kind: 'balance',
         text: 'The thermal lance now ignites directly on its target and sweeps onward at that distance — no more beam flailing out to maximum range past everything.',
       },
+      {
+        kind: 'balance',
+        text: 'Cloud Seeding earns its name: the jet now trails a dense contrail of fresh clouds behind it (a drop every ~0.3s, faster with ranks) and the cloud cap grows +5 per rank, so a strafing pass paints a real weather front.',
+      },
     ],
   },
   {

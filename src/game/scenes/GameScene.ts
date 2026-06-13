@@ -3114,17 +3114,24 @@ export class GameScene extends Phaser.Scene {
             velocityX: plane.velocityX * 0.35,
           })
         }
-        // cloud seeding synergy: the pass leaves fresh vapor behind it
+        // cloud seeding synergy: a dense contrail of vapor condenses behind the jet
         if (this.stats.seedingLevel > 0) {
           plane.seedAccumulatorMs += delta
           const seedInterval = Math.max(
-            400,
+            SYNERGIES.seeding.minDropIntervalMs,
             SYNERGIES.seeding.dropIntervalMsBase -
               SYNERGIES.seeding.dropIntervalStepMs * (this.stats.seedingLevel - 1),
           )
           if (plane.seedAccumulatorMs >= seedInterval) {
             plane.seedAccumulatorMs = 0
-            this.spawnSeededCloud({ x: plane.image.x, y: plane.image.y })
+            const speed = Math.hypot(plane.velocityX, plane.velocityY)
+            this.spawnSeededCloud({
+              x: plane.image.x - (plane.velocityX / speed) * SYNERGIES.seeding.trailBehindPx,
+              y:
+                plane.image.y -
+                (plane.velocityY / speed) * SYNERGIES.seeding.trailBehindPx +
+                (Math.random() * 2 - 1) * 10,
+            })
           }
         }
         // close air support synergy: the jet fires rockets mid-pass
@@ -3223,7 +3230,7 @@ export class GameScene extends Phaser.Scene {
   private spawnSeededCloud({ x, y }: { x: number; y: number }): void {
     const cloudCap =
       CLOUD.maxClouds +
-      SYNERGIES.seeding.extraCloudCap +
+      SYNERGIES.seeding.extraCloudCapPerLevel * this.stats.seedingLevel +
       SYNERGIES.smokescreen.extraCloudCapPerLevel * this.stats.smokescreenLevel
     if (this.cloudImages.length >= cloudCap) {
       return
@@ -3234,7 +3241,7 @@ export class GameScene extends Phaser.Scene {
       .setAlpha(0)
       .setScale(0.7 + Math.random() * 0.4)
       .setDepth(DEPTHS.clouds)
-    this.tweens.add({ targets: image, alpha: CLOUD.activeAlpha, duration: 800 })
+    this.tweens.add({ targets: image, alpha: CLOUD.activeAlpha, duration: 450 })
     this.cloudImages.push({ image, speed: 6 + Math.random() * 14 })
   }
 

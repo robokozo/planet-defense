@@ -165,11 +165,14 @@ export const SYNERGIES = {
     radiusBonusBase: 0.15,
     radiusBonusPerLevel: 0.05,
   },
-  /** cloud cover × strafing run: passes seed fresh clouds along the flight path */
+  /** cloud cover × strafing run: the jet trails a contrail of fresh clouds behind it */
   seeding: {
-    dropIntervalMsBase: 1_000,
-    dropIntervalStepMs: 120,
-    extraCloudCap: 4,
+    dropIntervalMsBase: 320,
+    dropIntervalStepMs: 40,
+    minDropIntervalMs: 150,
+    /** how far behind the jet each cloud condenses */
+    trailBehindPx: 46,
+    extraCloudCapPerLevel: 5,
   },
   /** rocket pod × strafing run: the jet launches rockets mid-pass */
   cas: {
