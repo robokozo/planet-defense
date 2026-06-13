@@ -129,6 +129,8 @@ interface SwarmUnit {
 interface CloudUnit {
   image: Phaser.GameObjects.Image
   speed: number
+  /** the cloud's own scale before the Cloud Cover rank multiplier — so ranks re-scale without compounding */
+  baseScale: number
 }
 
 /** a thermal lance beam anchored at a cannon, sweeping an arc across the sky */
@@ -3299,13 +3301,14 @@ export class GameScene extends Phaser.Scene {
       return
     }
     const textureKey = `cloud-${Math.floor(Math.random() * 3)}`
+    const baseScale = 0.7 + Math.random() * 0.4
     const image = this.add
       .image(x, y, textureKey)
       .setAlpha(0)
-      .setScale(0.7 + Math.random() * 0.4)
+      .setScale(baseScale * this.cloudScaleFactor())
       .setDepth(DEPTHS.clouds)
     this.tweens.add({ targets: image, alpha: CLOUD.activeAlpha, duration: 450 })
-    this.cloudImages.push({ image, speed: 6 + Math.random() * 14 })
+    this.cloudImages.push({ image, speed: 6 + Math.random() * 14, baseScale })
   }
 
   private dropFlakBomb({ x, y, velocityX }: { x: number; y: number; velocityX: number }): void {
@@ -4986,7 +4989,9 @@ export class GameScene extends Phaser.Scene {
     if (
       this.hasActiveOffer === false ||
       this.runBanishesLeft <= 0 ||
-      isFillerUpgradeId({ upgradeId }) === true
+      isFillerUpgradeId({ upgradeId }) === true ||
+      // never let a player strike a card they've already invested in — that's their build
+      (this.upgradeStacks.get(upgradeId) ?? 0) > 0
     ) {
       return
     }
@@ -5342,56 +5347,62 @@ export class GameScene extends Phaser.Scene {
   }
 
   /**
-   * A sky spot the guns can reach. Clouds hang here so the slow always lands on
-   * the lane invaders fall through and the lance can sweep across them — on tall
-   * portrait (mobile) arenas a fixed altitude otherwise floats the bank far above
-   * the ground-mounted cannons' reach.
+   * A cloud position with layered altitude, for a natural deck rather than one
+   * flat band. `layer` in [0,1] picks the height: 0 hangs low over the city
+   * (inside the cannons' reach, so the slow and lance refraction always have a
+   * bank down low), 1 drifts high into the sky for visual variety. The band is
+   * relative to the cannon line and arena height, so it adapts to tall portrait
+   * (mobile) screens instead of floating everything off the top.
    */
-  private randomInRangeCloudPosition(): { x: number; y: number } {
-    if (this.cannons.length === 0) {
-      return { x: Math.random() * this.arenaWidth, y: 120 + Math.random() * 200 }
-    }
-    const cannon = this.cannons[Math.floor(Math.random() * this.cannons.length)]
-    // 35–82% of the way out, biased up into the sky so the bank hangs over the lane
-    const radius = this.stats.range * (0.35 + Math.random() * 0.47)
-    const angleFromUp = (Math.random() * 2 - 1) * (Math.PI * 0.42)
-    return {
-      x: Phaser.Math.Clamp(cannon.x + Math.sin(angleFromUp) * radius, 60, this.arenaWidth - 60),
-      y: Phaser.Math.Clamp(
-        this.cannonY - Math.cos(angleFromUp) * radius,
-        MINE_CEILING_Y,
-        this.cannonY - 80,
-      ),
-    }
+  private cloudPosition({ layer, xFraction }: { layer: number; xFraction?: number }): {
+    x: number
+    y: number
+  } {
+    const fraction = xFraction ?? 0.06 + Math.random() * 0.88
+    const x = Phaser.Math.Clamp(this.arenaWidth * fraction, 36, this.arenaWidth - 36)
+    const lowY = this.cannonY - this.stats.range * 0.3 // lowest deck — over the city, in range
+    const highY = Math.max(MINE_CEILING_Y, this.arenaHeight * 0.08) // high sky
+    const t = Phaser.Math.Clamp(layer + (Math.random() * 2 - 1) * 0.05, 0, 1)
+    return { x, y: Phaser.Math.Linear(lowY, highY, t) }
+  }
+
+  /** Cloud Cover ranks puff the clouds up — bigger banks blanket more sky */
+  private cloudScaleFactor(): number {
+    return 1 + CLOUD.scalePerLevel * Math.max(0, this.stats.cloudLevel - 1)
   }
 
   private spawnClouds(): void {
+    // spread across the width and stacked low → high so the opening sky reads as
+    // a layered deck; the lowest (layer 0.08) sits in gun range for the synergies
     const cloudConfigs = [
-      { textureKey: 'cloud-0', speed: 7, alpha: 0.14, scale: 1.2 },
-      { textureKey: 'cloud-1', speed: 11, alpha: 0.1, scale: 0.9 },
-      { textureKey: 'cloud-2', speed: 15, alpha: 0.12, scale: 1 },
-      { textureKey: 'cloud-1', speed: 19, alpha: 0.08, scale: 1.4 },
+      { textureKey: 'cloud-0', speed: 7, alpha: 0.14, scale: 1.2, xFraction: 0.18, layer: 0.08 },
+      { textureKey: 'cloud-1', speed: 11, alpha: 0.1, scale: 0.9, xFraction: 0.46, layer: 0.45 },
+      { textureKey: 'cloud-2', speed: 15, alpha: 0.12, scale: 1, xFraction: 0.74, layer: 0.72 },
+      { textureKey: 'cloud-1', speed: 19, alpha: 0.08, scale: 1.4, xFraction: 0.32, layer: 1 },
     ]
+    const scaleFactor = this.cloudScaleFactor()
     this.cloudImages = cloudConfigs.map((config) => {
-      const { x, y } = this.randomInRangeCloudPosition()
+      const { x, y } = this.cloudPosition({ layer: config.layer, xFraction: config.xFraction })
       return {
         image: this.add
           .image(x, y, config.textureKey)
           .setAlpha(config.alpha)
-          .setScale(config.scale)
+          .setScale(config.scale * scaleFactor)
           .setDepth(DEPTHS.clouds),
         speed: config.speed,
+        baseScale: config.scale,
       }
     })
   }
 
-  /** cloud cover: existing clouds turn active (denser), seeding adds new ones */
+  /** cloud cover: existing clouds turn active (denser) and grow with rank, seeding adds new ones */
   private syncCloudCover(): void {
     if (this.stats.cloudLevel <= 0) {
       return
     }
+    const scaleFactor = this.cloudScaleFactor()
     for (const cloud of this.cloudImages) {
-      cloud.image.setAlpha(CLOUD.activeAlpha)
+      cloud.image.setAlpha(CLOUD.activeAlpha).setScale(cloud.baseScale * scaleFactor)
     }
     const desiredCount = Math.min(
       CLOUD.maxClouds,
@@ -5399,14 +5410,16 @@ export class GameScene extends Phaser.Scene {
     )
     while (this.cloudImages.length < desiredCount) {
       const textureKey = `cloud-${Math.floor(Math.random() * 3)}`
-      const { x, y } = this.randomInRangeCloudPosition()
+      // random layer so added cover fills out the whole deck, not just one height
+      const { x, y } = this.cloudPosition({ layer: Math.random() })
+      const baseScale = 0.85 + Math.random() * 0.7
       const image = this.add
         .image(x, y, textureKey)
         .setAlpha(0)
-        .setScale(0.9 + Math.random() * 0.6)
+        .setScale(baseScale * scaleFactor)
         .setDepth(DEPTHS.clouds)
       this.tweens.add({ targets: image, alpha: CLOUD.activeAlpha, duration: 900 })
-      this.cloudImages.push({ image, speed: 6 + Math.random() * 14 })
+      this.cloudImages.push({ image, speed: 6 + Math.random() * 14, baseScale })
     }
   }
 
@@ -5596,12 +5609,32 @@ export class GameScene extends Phaser.Scene {
         [78, 30, 20],
       ],
     ]
+    const padding = 2
     for (let index = 0; index < cloudShapes.length; index += 1) {
-      for (const [x, y, radius] of cloudShapes[index]) {
-        graphics.fillStyle(0xe2e8f0, 0.5)
-        graphics.fillCircle(x, y, radius)
+      const shape = cloudShapes[index]
+      // fit the texture to the puff cluster so the larger circles never get
+      // sliced off the top or bottom (the old fixed 140×52 cropped them)
+      let minX = Number.POSITIVE_INFINITY
+      let minY = Number.POSITIVE_INFINITY
+      let maxX = Number.NEGATIVE_INFINITY
+      let maxY = Number.NEGATIVE_INFINITY
+      for (const [x, y, radius] of shape) {
+        minX = Math.min(minX, x - radius)
+        minY = Math.min(minY, y - radius)
+        maxX = Math.max(maxX, x + radius)
+        maxY = Math.max(maxY, y + radius)
       }
-      graphics.generateTexture(`cloud-${index}`, 140, 52)
+      const offsetX = padding - minX
+      const offsetY = padding - minY
+      for (const [x, y, radius] of shape) {
+        graphics.fillStyle(0xe2e8f0, 0.5)
+        graphics.fillCircle(x + offsetX, y + offsetY, radius)
+      }
+      graphics.generateTexture(
+        `cloud-${index}`,
+        Math.ceil(maxX - minX + padding * 2),
+        Math.ceil(maxY - minY + padding * 2),
+      )
       graphics.clear()
     }
   }

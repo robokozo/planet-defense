@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 
 import {
   UPGRADE_DEFINITIONS,
@@ -13,6 +13,9 @@ const { stacks = null } = defineProps<{
 }>()
 
 const emit = defineEmits<{ close: [] }>()
+
+/** quick toggle: only synergies the current build has started toward (a parent already picked) */
+const onlyForMyBuild = ref(false)
 
 interface ParentProgress {
   name: string
@@ -72,6 +75,14 @@ const rows = computed<Array<GlossaryRow>>(() => {
       a.definition.name.localeCompare(b.definition.name),
   )
 })
+
+/** what's actually listed: everything, or — when toggled in-run — only combos in reach */
+const visibleRows = computed(() => {
+  if (onlyForMyBuild.value === false || stacks === null) {
+    return rows.value
+  }
+  return rows.value.filter((row) => row.state !== 'none')
+})
 </script>
 
 <template>
@@ -82,15 +93,31 @@ const rows = computed<Array<GlossaryRow>>(() => {
     <div
       class="flex max-h-[85vh] w-full max-w-2xl flex-col rounded-2xl border border-slate-700 bg-slate-900 shadow-2xl"
     >
-      <div class="flex items-center justify-between border-b border-slate-800 px-5 py-3">
+      <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 px-5 py-3">
         <h2 class="text-lg font-black tracking-wider text-fuchsia-300">⛓ SYNERGY GLOSSARY</h2>
-        <button
-          type="button"
-          class="cursor-pointer rounded-lg bg-slate-800 px-3 py-1.5 text-sm font-semibold text-slate-300 hover:bg-slate-700"
-          @click="emit('close')"
-        >
-          Close ✕
-        </button>
+        <div class="flex items-center gap-2">
+          <button
+            v-if="stacks !== null"
+            type="button"
+            class="cursor-pointer rounded-lg px-3 py-1.5 text-xs font-semibold transition"
+            :class="
+              onlyForMyBuild === true
+                ? 'bg-fuchsia-500/20 text-fuchsia-300'
+                : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+            "
+            :title="onlyForMyBuild === true ? 'Showing combos your build can reach' : 'Showing every synergy'"
+            @click="onlyForMyBuild = onlyForMyBuild === false"
+          >
+            {{ onlyForMyBuild === true ? 'For my build' : 'All synergies' }}
+          </button>
+          <button
+            type="button"
+            class="cursor-pointer rounded-lg bg-slate-800 px-3 py-1.5 text-sm font-semibold text-slate-300 hover:bg-slate-700"
+            @click="emit('close')"
+          >
+            Close ✕
+          </button>
+        </div>
       </div>
       <p class="px-5 pt-3 text-xs text-slate-500">
         Synergy cards are only offered once both parent cards reach the listed tier.
@@ -99,9 +126,15 @@ const rows = computed<Array<GlossaryRow>>(() => {
           <span class="text-lime-300">green = owned</span>.
         </span>
       </p>
-      <ul class="flex flex-col gap-2 overflow-y-auto p-5">
+      <p
+        v-if="visibleRows.length === 0"
+        class="px-5 py-10 text-center text-sm text-slate-500"
+      >
+        No synergies in reach yet — pick up a weapon to start a combo.
+      </p>
+      <ul v-else class="flex flex-col gap-2 overflow-y-auto p-5">
         <li
-          v-for="row in rows"
+          v-for="row in visibleRows"
           :key="row.definition.id"
           class="rounded-xl border p-3"
           :class="ROW_CLASSES[row.state]"

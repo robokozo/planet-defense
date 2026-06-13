@@ -533,6 +533,8 @@ export const CLOUD = {
   cloudsPerStack: 2,
   maxClouds: 12,
   activeAlpha: 0.26,
+  /** every cloud grows by this fraction per rank past the first — bigger banks cover more sky */
+  scalePerLevel: 0.12,
 } as const
 
 /** generic consolation cards offered when the real card pool runs dry */

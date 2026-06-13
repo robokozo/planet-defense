@@ -38,6 +38,10 @@ export const PATCH_NOTES: Array<PatchEntry> = [
         text: 'A live loadout panel during a run lists every card you’ve picked and its tier, down the left edge.',
       },
       {
+        kind: 'new',
+        text: 'The synergy glossary has a quick “For my build” toggle that filters to just the combos your current cards have started toward.',
+      },
+      {
         kind: 'balance',
         text: 'Capacitor surges last twice as long (12s base, up from 6s) and now also slash every weapon’s reload by 40% while they burn — a real burst window on top of the damage bonus.',
       },
@@ -59,7 +63,19 @@ export const PATCH_NOTES: Array<PatchEntry> = [
       },
       {
         kind: 'fix',
-        text: 'Cloud cover hangs where the guns can reach it — clouds no longer float far above the battle on tall (mobile/portrait) screens, so the slow and the lance’s refraction always have a bank to work with.',
+        text: 'Clouds now form a layered deck — drifting from low over the city (in gun reach, so the slow and lance refraction have a bank to work with) up into the high sky — instead of all hugging one altitude. Adapts to tall (mobile/portrait) screens rather than floating off the top.',
+      },
+      {
+        kind: 'balance',
+        text: 'Cloud Cover ranks now also puff the clouds bigger (about +12% per rank), so each rank blankets more sky — more slow area and a fatter target for lance refraction, on top of the extra clouds and deeper slow.',
+      },
+      {
+        kind: 'fix',
+        text: 'Cloud sprites are no longer sliced flat on the top and bottom — the puffs render whole.',
+      },
+      {
+        kind: 'fix',
+        text: 'You can no longer banish a card you’ve already put points into — striking your own build was never the intent.',
       },
     ],
   },

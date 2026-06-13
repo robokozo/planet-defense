@@ -2,7 +2,7 @@
 import { ref } from 'vue'
 
 import SynergyGlossary from '@/components/SynergyGlossary.vue'
-import type { LevelUpOffer, UpgradeRarity } from '@/game/types'
+import type { LevelUpOffer, UpgradeChoice, UpgradeRarity } from '@/game/types'
 
 const { offer, stacks = null } = defineProps<{
   offer: LevelUpOffer
@@ -18,9 +18,10 @@ const emit = defineEmits<{
   banish: [payload: { upgradeId: string }]
 }>()
 
-function isBanishable({ upgradeId }: { upgradeId: string }): boolean {
-  // consolation fillers are not part of the pool, so striking them is meaningless
-  return upgradeId.startsWith('filler-') === false
+function isBanishable({ choice }: { choice: UpgradeChoice }): boolean {
+  // consolation fillers aren't in the pool, and a card you've already invested in
+  // is your build — striking either is never what the player wants
+  return choice.id.startsWith('filler-') === false && choice.currentStacks === 0
 }
 
 const RARITY_CARD_CLASSES: Record<UpgradeRarity, string> = {
@@ -97,7 +98,7 @@ const RARITY_LABEL_CLASSES: Record<UpgradeRarity, string> = {
             </span>
           </button>
           <button
-            v-if="offer.banishesLeft > 0 && isBanishable({ upgradeId: choice.id })"
+            v-if="offer.banishesLeft > 0 && isBanishable({ choice })"
             type="button"
             class="absolute -right-2 -top-2 flex h-7 w-7 cursor-pointer items-center justify-center rounded-full border border-red-500/50 bg-slate-950 text-xs font-bold text-red-400 transition hover:bg-red-500/20 hover:text-red-300"
             :title="`Banish ${choice.name} for the rest of this run`"
