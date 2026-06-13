@@ -106,7 +106,6 @@ export const BASE_RUN_STATS: RunStats = {
   capacitorChargeRate: 1,
   surgeDamageBonus: 0.25,
   surgeDurationMs: 6_000,
-  capacitorStartFraction: 0,
   novaIntervalMs: null,
   novaDamage: 40,
   aegisIntervalMs: null,

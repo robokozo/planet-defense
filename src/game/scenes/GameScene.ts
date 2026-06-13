@@ -462,7 +462,7 @@ export class GameScene extends Phaser.Scene {
     this.buildingXs = BUILDING_X_FRACTIONS.map((fraction) => Math.round(fraction * this.arenaWidth))
     this.stats = { ...data.startingStats }
     this.stardustMultiplier = data.stardustMultiplier
-    this.capacitorCharge = this.stats.hasCapacitor === true ? this.stats.capacitorStartFraction : 0
+    this.capacitorCharge = 0
     this.runRerollsLeft = this.stats.rerollsPerRun
     this.runBanishesLeft = this.stats.banishesPerRun
     this.hp = this.stats.maxHp
@@ -708,7 +708,7 @@ export class GameScene extends Phaser.Scene {
     this.stats = { ...stats }
     this.sandboxLayout = layout
     this.upgradeStacks = new Map(Object.entries(cardStacks).filter(([, stacks]) => stacks > 0))
-    this.capacitorCharge = this.stats.hasCapacitor === true ? this.stats.capacitorStartFraction : 0
+    this.capacitorCharge = 0
     this.surgeRemainingMs = 0
     this.hp = this.stats.maxHp
     this.elapsedMs = 0

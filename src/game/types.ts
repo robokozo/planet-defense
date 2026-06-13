@@ -34,8 +34,6 @@ export interface RunStats {
   /** all-weapon damage bonus while a surge is active (0.25 = +25%) */
   surgeDamageBonus: number
   surgeDurationMs: number
-  /** fraction of the capacitor pre-filled at run start (reactor expansion) */
-  capacitorStartFraction: number
   /** null means novas are not unlocked for this run */
   novaIntervalMs: number | null
   novaDamage: number

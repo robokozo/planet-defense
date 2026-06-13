@@ -36,7 +36,6 @@ export type MetaStat =
   | 'capacitorChargePercent'
   | 'surgeDamagePercent'
   | 'surgeDurationMsFlat'
-  | 'capacitorStartPercent'
   | 'passivePerMinuteFlat'
   | 'interestPercentFlat'
 
@@ -685,8 +684,7 @@ function buildSkillNodes(): Array<SkillNode> {
       id: 'reactor-expansion',
       name: 'Overcharge Core',
       icon: '☢️',
-      description:
-        'Start every run with the capacitor half charged; it charges +25% faster and surges hit +25% harder',
+      description: 'The capacitor charges +40% faster and surges hit +40% harder',
       kind: 'notable',
       tier: 'legendary',
       branch: 'reactor',
@@ -694,9 +692,8 @@ function buildSkillNodes(): Array<SkillNode> {
       ...polarPoint({ radius: EXPANSION_RADIUS, angleDeg: 308.57 }),
       connections: [],
       effects: [
-        { stat: 'capacitorStartPercent', amount: 50 },
-        { stat: 'capacitorChargePercent', amount: 25 },
-        { stat: 'surgeDamagePercent', amount: 25 },
+        { stat: 'capacitorChargePercent', amount: 40 },
+        { stat: 'surgeDamagePercent', amount: 40 },
       ],
     },
   ]
@@ -808,10 +805,6 @@ export function buildStartingStats({
       BASE_RUN_STATS.capacitorChargeRate * (1 + valueOf('capacitorChargePercent') / 100),
     surgeDamageBonus: BASE_RUN_STATS.surgeDamageBonus + valueOf('surgeDamagePercent') / 100,
     surgeDurationMs: BASE_RUN_STATS.surgeDurationMs + valueOf('surgeDurationMsFlat'),
-    capacitorStartFraction: Math.min(
-      1,
-      BASE_RUN_STATS.capacitorStartFraction + valueOf('capacitorStartPercent') / 100,
-    ),
   }
 }
 

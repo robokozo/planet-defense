@@ -57,6 +57,10 @@ export const PATCH_NOTES: Array<PatchEntry> = [
         kind: 'balance',
         text: 'Salvage Protocol was out-flakking the flak gun — consumed hosts now burst into a smaller ring of weaker fragments. In exchange, the Flak Gun itself got hotter: 6 base fragments (up from 5) at 60% damage each (up from 55%).',
       },
+      {
+        kind: 'balance',
+        text: 'Overcharge Core no longer starts runs half charged (it was a one-shot gimmick) — instead it charges +40% faster and surges +40% harder, all run long.',
+      },
     ],
   },
   {
